@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wave-sdk"
+version = "2.0.0"
+description = "Official WAVE SDK for Python - 33 API modules for streaming, production, analytics, and more"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "WAVE Inc.", email = "sdk@wave.online"}
+]
+keywords = [
+    "wave",
+    "streaming",
+    "video",
+    "audio",
+    "broadcast",
+    "production",
+    "ndi",
+    "srt",
+    "webrtc",
+    "clips",
+    "editor",
+    "voice",
+    "transcription",
+    "captions",
+    "analytics",
+    "ai",
+    "sdk",
+    "prism",
+    "fleet",
+    "mesh"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+    "black>=23.0.0",
+]
+
+[project.urls]
+Homepage = "https://docs.wave.online/sdk/python"
+Documentation = "https://docs.wave.online/sdk/python"
+Repository = "https://github.com/wave-av/wave-surfer-connect"
+Issues = "https://github.com/wave-av/wave-surfer-connect/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["wave*"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
