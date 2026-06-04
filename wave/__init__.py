@@ -58,13 +58,16 @@ from wave.usb import UsbAPI
 # Cross-cutting
 from wave.notifications import NotificationsAPI
 from wave.drm import DrmAPI
+from wave.realtime import RealtimeAPI, RealtimeChannel
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 __all__ = [
     "Wave",
     "WaveClient",
     "WaveError",
     "RateLimitError",
+    "RealtimeAPI",
+    "RealtimeChannel",
     # Existing P3
     "ClipsAPI", "EditorAPI", "VoiceAPI", "PhoneAPI", "CollabAPI",
     "CaptionsAPI", "ChaptersAPI", "StudioAIAPI", "TranscribeAPI",
@@ -160,3 +163,6 @@ class Wave:
         # Cross-cutting
         self.notifications = NotificationsAPI(self.client)
         self.drm = DrmAPI(self.client)
+
+        # Realtime — live control & event plane (WebSocket)
+        self.realtime = RealtimeAPI(self.client)
