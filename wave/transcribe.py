@@ -1,9 +1,12 @@
 """WAVE SDK - Transcribe API. Audio/video transcription with speaker diarization."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Speaker(BaseModel):
     id: str; label: str; segments_count: int = 0; total_duration: float = 0

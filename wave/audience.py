@@ -1,8 +1,11 @@
 """WAVE SDK - Audience API. Polls, Q&A, reactions, and engagement."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Poll(BaseModel):
     id: str; stream_id: str; question: str; options: list[dict]; status: str; total_votes: int = 0; created_at: str; updated_at: str

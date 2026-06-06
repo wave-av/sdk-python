@@ -1,8 +1,11 @@
 """WAVE SDK - Studio AI API. AI-powered production assistance, directing, and moderation."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class AIAssistant(BaseModel):
     id: str; production_id: str | None = None; stream_id: str | None = None; mode: str; status: str; config: dict | None = None; stats: dict | None = None; started_at: str | None = None; created_at: str; updated_at: str

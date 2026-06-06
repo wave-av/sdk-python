@@ -1,8 +1,11 @@
 """WAVE SDK - DRM API. Content protection with Widevine, FairPlay, and PlayReady."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class DRMPolicy(BaseModel):
     id: str; organization_id: str; name: str; providers: list[str]; allow_offline: bool = False; max_devices: int = 1; output_protection: str = "none"; persistent_license: bool = False; created_at: str; updated_at: str

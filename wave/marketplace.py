@@ -1,8 +1,11 @@
 """WAVE SDK - Marketplace API. Templates, plugins, and asset marketplace."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class MarketplaceItem(BaseModel):
     id: str; name: str; description: str; type: str; status: str; author_name: str; version: str; price_cents: int = 0; downloads: int = 0; rating: float = 0; tags: list[str] | None = None; category: str; created_at: str; updated_at: str

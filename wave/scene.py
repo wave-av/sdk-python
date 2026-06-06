@@ -1,9 +1,12 @@
 """WAVE SDK - Scene API. AI scene detection, shot classification, and visual analysis."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Scene(BaseModel):
     id: str; start_time: float; end_time: float; scene_type: str; shot_type: str | None = None; confidence: float; labels: list[str] | None = None; thumbnail_url: str | None = None

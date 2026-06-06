@@ -86,8 +86,20 @@ warn_unused_configs = true
 [tool.ruff]
 target-version = "py39"
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
-ignore = ["E501"]
+# E501: line length is left to the formatter, not the linter.
+# E701/E702: the SDK deliberately uses a compressed one-liner house style
+# (multiple statements per line). Blessed by the maintainers.
+ignore = ["E501", "E701", "E702"]
+
+[tool.ruff.lint.per-file-ignores]
+# Public re-exports: the package __init__ exists to re-export the API surface.
+"wave/__init__.py" = ["F401"]
+# Export-verification test imports every public symbol to assert it exists
+# (checked via __all__ / hasattr), so the names are intentionally "unused".
+"tests/test_sdk_exports.py" = ["F401"]
 
 [tool.black]
 line-length = 100

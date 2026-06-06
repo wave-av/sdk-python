@@ -10,55 +10,55 @@ Example:
     >>> clips = client.clips.list()
 """
 
-from wave.client import WaveClient, WaveError, RateLimitError
+from wave.audience import AudienceAPI
+from wave.captions import CaptionsAPI
+from wave.chapters import ChaptersAPI
+from wave.client import RateLimitError, WaveClient, WaveError
 
 # Existing P3 modules
 from wave.clips import ClipsAPI
-from wave.editor import EditorAPI
-from wave.voice import VoiceAPI
-from wave.phone import PhoneAPI
 from wave.collab import CollabAPI
-from wave.captions import CaptionsAPI
-from wave.chapters import ChaptersAPI
-from wave.studio_ai import StudioAIAPI
-from wave.transcribe import TranscribeAPI
-from wave.sentiment import SentimentAPI
-from wave.search import SearchAPI
-from wave.scene import SceneAPI
-
-# P1 modules
-from wave.pipeline import PipelineAPI
-from wave.studio import StudioAPI
+from wave.connect import ConnectAPI
+from wave.creator import CreatorAPI
+from wave.desktop import DesktopAPI
+from wave.distribution import DistributionAPI
+from wave.drm import DrmAPI
+from wave.edge import EdgeAPI
+from wave.editor import EditorAPI
 
 # P2 modules
 from wave.fleet import FleetAPI
 from wave.ghost import GhostAPI
-from wave.mesh import MeshAPI
-from wave.edge import EdgeAPI
-from wave.pulse import PulseAPI
-from wave.prism import PrismAPI
-from wave.zoom import ZoomAPI
-
-# P3 new modules
-from wave.vault import VaultAPI
 from wave.marketplace import MarketplaceAPI
-from wave.connect import ConnectAPI
-from wave.distribution import DistributionAPI
-from wave.desktop import DesktopAPI
-from wave.signage import SignageAPI
-from wave.qr import QrAPI
-from wave.audience import AudienceAPI
-from wave.creator import CreatorAPI
-
-# P4 modules
-from wave.podcast import PodcastAPI
-from wave.slides import SlidesAPI
-from wave.usb import UsbAPI
+from wave.mesh import MeshAPI
 
 # Cross-cutting
 from wave.notifications import NotificationsAPI
-from wave.drm import DrmAPI
+from wave.phone import PhoneAPI
+
+# P1 modules
+from wave.pipeline import PipelineAPI
+
+# P4 modules
+from wave.podcast import PodcastAPI
+from wave.prism import PrismAPI
+from wave.pulse import PulseAPI
+from wave.qr import QrAPI
 from wave.realtime import RealtimeAPI, RealtimeChannel
+from wave.scene import SceneAPI
+from wave.search import SearchAPI
+from wave.sentiment import SentimentAPI
+from wave.signage import SignageAPI
+from wave.slides import SlidesAPI
+from wave.studio import StudioAPI
+from wave.studio_ai import StudioAIAPI
+from wave.transcribe import TranscribeAPI
+from wave.usb import UsbAPI
+
+# P3 new modules
+from wave.vault import VaultAPI
+from wave.voice import VoiceAPI
+from wave.zoom import ZoomAPI
 
 __version__ = "2.1.0"
 __all__ = [

@@ -6,10 +6,9 @@ Core HTTP client with authentication, rate limiting, and retry logic.
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Any, TypeVar, Generic
-from urllib.parse import urlencode
+import time
+from typing import Any, Generic, TypeVar
 
 import httpx
 from pydantic import BaseModel
@@ -43,9 +42,7 @@ class WaveError(Exception):
             return True
         if 500 <= status_code < 600:
             return True
-        if code in ("TIMEOUT", "NETWORK_ERROR", "SERVICE_UNAVAILABLE"):
-            return True
-        return False
+        return code in ("TIMEOUT", "NETWORK_ERROR", "SERVICE_UNAVAILABLE")
 
     def __str__(self) -> str:
         return f"WaveError({self.code}): {self.message}"
@@ -302,7 +299,7 @@ class WaveClient:
         """Close the HTTP client."""
         self._client.close()
 
-    def __enter__(self) -> "WaveClient":
+    def __enter__(self) -> WaveClient:
         return self
 
     def __exit__(self, *args: Any) -> None:

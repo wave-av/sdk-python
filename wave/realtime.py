@@ -10,12 +10,13 @@ federation) — the SDK only forwards your API key.
 """
 from __future__ import annotations
 
+import contextlib
 import json
-from typing import Any, Callable, Iterator
+from collections.abc import Iterator
+from typing import Any, Callable
+from wave.client import WaveClient
 
 import httpx
-
-from wave.client import WaveClient
 
 _DEFAULT_WS = "wss://realtime.wave.online"
 
@@ -63,7 +64,7 @@ class RealtimeChannel:
         except Exception:
             return
 
-    def on(self, event: str, callback: Callable[[Any], None]) -> "RealtimeChannel":
+    def on(self, event: str, callback: Callable[[Any], None]) -> RealtimeChannel:
         """Register a handler. ``event`` is a frame type ('message','join','leave','presence') or a WAVE
         event name (e.g. 'caption.cue', 'sentiment.tick'). Returns self for chaining."""
         self._handlers.setdefault(event, []).append(callback)
@@ -89,10 +90,8 @@ class RealtimeChannel:
         self._ws.send(json.dumps({"op": "presence"}))
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):  # pragma: no cover
             self._ws.close()
-        except Exception:  # pragma: no cover
-            pass
 
 
 class RealtimeAPI:

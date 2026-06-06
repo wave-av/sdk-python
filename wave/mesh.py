@@ -1,8 +1,11 @@
 """WAVE SDK - Mesh API. Multi-region infrastructure failover."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class MeshRegion(BaseModel):
     id: str; name: str; provider: str; location: str; status: str; latency_ms: int; capacity_percent: float; stream_count: int; viewer_count: int; is_primary: bool; created_at: str; updated_at: str

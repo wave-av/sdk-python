@@ -1,8 +1,11 @@
 """WAVE SDK - Prism API. Virtual Device Bridge for network AV to USB."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class VirtualDevice(BaseModel):
     id: str; organization_id: str; name: str; type: str; status: str; source_protocol: str; source_endpoint: str; node_id: str; resolution: dict | None = None; frame_rate: int | None = None; health_score: float = 100; ptz_enabled: bool = False; created_at: str; updated_at: str

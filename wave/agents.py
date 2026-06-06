@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
+
 import httpx
 
 
@@ -64,9 +65,9 @@ class StreamMonitorAgent(WaveAgent):
         self,
         api_key: str,
         name: str = "stream-monitor",
-        stream_ids: Optional[list[str]] = None,
+        stream_ids: list[str] | None = None,
         auto_remediate: bool = False,
-        on_quality_drop: Optional[Callable[..., Any]] = None,
+        on_quality_drop: Callable[..., Any] | None = None,
     ) -> None:
         super().__init__(api_key=api_key, name=name, agent_type="stream_monitor")
         self.stream_ids = stream_ids or []

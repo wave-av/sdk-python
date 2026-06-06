@@ -1,8 +1,11 @@
 """WAVE SDK - Collab API. Real-time collaboration rooms, participants, comments, and annotations."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class CollabRoom(BaseModel):
     id: str; organization_id: str; name: str; status: str; participant_count: int = 0; max_participants: int = 50; settings: dict | None = None; created_at: str; updated_at: str

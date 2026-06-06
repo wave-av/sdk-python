@@ -1,8 +1,11 @@
 """WAVE SDK - QR API. Dynamic QR code generation and analytics."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class QRCode(BaseModel):
     id: str; organization_id: str; type: str; content: str; short_url: str; image_url: str; scan_count: int = 0; status: str = "active"; expires_at: str | None = None; created_at: str; updated_at: str

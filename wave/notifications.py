@@ -1,8 +1,11 @@
 """WAVE SDK - Notifications API. User notifications, preferences, and delivery channels."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Notification(BaseModel):
     id: str; user_id: str; type: str; title: str; body: str; status: str; priority: str; channel: str; action_url: str | None = None; read_at: str | None = None; created_at: str; updated_at: str

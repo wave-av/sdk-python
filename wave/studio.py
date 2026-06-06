@@ -1,8 +1,11 @@
 """WAVE SDK - Studio API. Multi-camera broadcast production."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Production(BaseModel):
     id: str; organization_id: str; title: str; description: str | None = None; status: str; program_source_id: str | None = None; preview_source_id: str | None = None; active_scene_id: str | None = None; recording_enabled: bool = False; streaming_enabled: bool = False; viewer_count: int = 0; started_at: str | None = None; ended_at: str | None = None; created_at: str; updated_at: str

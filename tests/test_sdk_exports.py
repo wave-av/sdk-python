@@ -11,14 +11,39 @@ import pytest
 def test_all_modules_import():
     """All 33 API modules should be importable from wave package."""
     from wave import (
-        ClipsAPI, EditorAPI, VoiceAPI, PhoneAPI, CollabAPI,
-        CaptionsAPI, ChaptersAPI, StudioAIAPI, TranscribeAPI,
-        SentimentAPI, SearchAPI, SceneAPI,
-        PipelineAPI, StudioAPI,
-        FleetAPI, GhostAPI, MeshAPI, EdgeAPI, PulseAPI, PrismAPI, ZoomAPI,
-        VaultAPI, MarketplaceAPI, ConnectAPI, DistributionAPI,
-        DesktopAPI, SignageAPI, QrAPI, AudienceAPI, CreatorAPI,
-        PodcastAPI, SlidesAPI, UsbAPI,
+        AudienceAPI,
+        CaptionsAPI,
+        ChaptersAPI,
+        ClipsAPI,
+        CollabAPI,
+        ConnectAPI,
+        CreatorAPI,
+        DesktopAPI,
+        DistributionAPI,
+        EdgeAPI,
+        EditorAPI,
+        FleetAPI,
+        GhostAPI,
+        MarketplaceAPI,
+        MeshAPI,
+        PhoneAPI,
+        PipelineAPI,
+        PodcastAPI,
+        PrismAPI,
+        PulseAPI,
+        QrAPI,
+        SceneAPI,
+        SearchAPI,
+        SentimentAPI,
+        SignageAPI,
+        SlidesAPI,
+        StudioAIAPI,
+        StudioAPI,
+        TranscribeAPI,
+        UsbAPI,
+        VaultAPI,
+        VoiceAPI,
+        ZoomAPI,
     )
     # All should be classes
     assert callable(ClipsAPI)
@@ -29,7 +54,7 @@ def test_all_modules_import():
 
 def test_wave_client_import():
     """Core client classes should import."""
-    from wave import WaveClient, WaveError, RateLimitError
+    from wave import RateLimitError, WaveClient, WaveError
     assert callable(WaveClient)
     assert issubclass(WaveError, Exception)
     assert issubclass(RateLimitError, WaveError)
