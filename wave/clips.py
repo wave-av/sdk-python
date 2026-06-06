@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import time
 from typing import Any, Literal
-from pydantic import BaseModel
-
 from wave.client import WaveClient
+
+from pydantic import BaseModel
 
 
 class ClipSource(BaseModel):

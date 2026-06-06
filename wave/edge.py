@@ -1,8 +1,11 @@
 """WAVE SDK - Edge API. Edge computing and CDN operations."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class EdgeNode(BaseModel):
     id: str; name: str; region: str; provider: str; status: str; latency_ms: int; capacity_percent: float; active_workers: int; bandwidth_mbps: float; created_at: str; updated_at: str

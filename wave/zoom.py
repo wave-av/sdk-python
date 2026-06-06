@@ -1,8 +1,11 @@
 """WAVE SDK - Zoom API. Zoom meetings, rooms, recordings, and RTMS."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class ZoomMeeting(BaseModel):
     id: str; topic: str; type: str; status: str; start_url: str; join_url: str; host_id: str; duration_minutes: int; participants_count: int = 0; recording_enabled: bool = False; rtms_enabled: bool = False; created_at: str

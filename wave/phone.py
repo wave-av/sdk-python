@@ -1,9 +1,12 @@
 """WAVE SDK - Phone API. Voice calls, conferences, numbers, and recordings."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class PhoneNumber(BaseModel):
     id: str; number: str; type: str; capabilities: list[str] | None = None; status: str; region: str | None = None; created_at: str; updated_at: str

@@ -1,9 +1,12 @@
 """WAVE SDK - Pipeline API. Live stream management across protocols."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Stream(BaseModel):
     id: str; organization_id: str; title: str; description: str | None = None; status: str; protocol: str; ingest_url: str | None = None; playback_url: str | None = None; stream_key: str | None = None; resolution: str | None = None; frame_rate: int | None = None; bitrate_kbps: int | None = None; viewer_count: int = 0; recording_enabled: bool = False; tags: list[str] | None = None; metadata: dict[str, Any] | None = None; started_at: str | None = None; ended_at: str | None = None; created_at: str; updated_at: str

@@ -1,8 +1,11 @@
 """WAVE SDK - Podcast API. Podcast production, episodes, and distribution."""
 from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Podcast(BaseModel):
     id: str; organization_id: str; title: str; description: str; category: str; language: str = "en"; episode_count: int = 0; subscriber_count: int = 0; rss_url: str | None = None; created_at: str; updated_at: str

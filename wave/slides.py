@@ -1,9 +1,12 @@
 """WAVE SDK - Slides API. Presentation to video conversion."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Conversion(BaseModel):
     id: str; organization_id: str; title: str; status: str; input_format: str; input_url: str; output_url: str | None = None; slide_count: int = 0; duration_seconds: float | None = None; progress_percent: int = 0; error: str | None = None; created_at: str; updated_at: str

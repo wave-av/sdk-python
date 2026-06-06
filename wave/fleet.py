@@ -1,9 +1,12 @@
 """WAVE SDK - Fleet API. Desktop Node device fleet management."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class FleetNode(BaseModel):
     id: str; organization_id: str; name: str; status: str; health: str; ip_address: str | None = None; version: str | None = None; os: str | None = None; cpu_usage: float = 0; memory_usage: float = 0; device_count: int = 0; last_seen_at: str | None = None; created_at: str; updated_at: str

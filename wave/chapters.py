@@ -1,9 +1,12 @@
 """WAVE SDK - Chapters API. Auto-generate and manage video chapters."""
 from __future__ import annotations
+
 import time
 from typing import Any
-from pydantic import BaseModel
 from wave.client import WaveClient
+
+from pydantic import BaseModel
+
 
 class Chapter(BaseModel):
     id: str; title: str; start_time: float; end_time: float; thumbnail_url: str | None = None; description: str | None = None
