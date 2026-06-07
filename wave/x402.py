@@ -5,8 +5,8 @@ sign a USDC `TransferWithAuthorization` as EIP-712 typed data, then encode the X
 The signature is cryptographically bound to the payer's wallet; no bearer secret leaves the client,
 and the WAVE facilitator (not your server) broadcasts the on-chain pull.
 
-Byte-for-byte compatible with the reference TypeScript helper in ``@wave-av/agent-money`` — verified
-against a shared conformance vector (see ``tests/fixtures/x402_exact_vector.json``).
+Byte-for-byte compatible with WAVE's reference TypeScript x402 signer — verified against a shared
+conformance vector (see ``tests/fixtures/x402_exact_vector.json``).
 
 Signing needs the optional ``eth-account`` dependency::
 
@@ -42,7 +42,7 @@ class NetworkConfig(TypedDict):
 
 # USDC EIP-712 domains per network. The domain `name` differs by chain (mainnet "USD Coin" vs Sepolia
 # "USDC") — both confirmed on-chain via the token's name()/version() — so the typed-data hash, and thus
-# the signature, is chain-specific. Mirrors agent-money/src/protocols/x402-eip3009.ts exactly.
+# the signature, is chain-specific. Matches WAVE's reference TypeScript x402 EIP-712 domains exactly.
 NETWORKS: dict[str, NetworkConfig] = {
     "base": {
         "chainId": 8453,

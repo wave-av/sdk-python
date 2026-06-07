@@ -1,5 +1,5 @@
 {
-  "_note": "Canonical cross-language conformance vector for the x402 'exact' scheme (EIP-3009 TransferWithAuthorization). Generated from the reference viem stack used by @wave-av/agent-money with a fixed key + fixed nonce, so EVERY WAVE SDK port (python/go/rust/ruby/ts) MUST reproduce these signatures and headers byte-for-byte. The private key is the universally-published Hardhat account #1 test key — NOT a secret; never use it for real funds.",
+  "_note": "Canonical cross-language conformance vector for the x402 'exact' scheme (EIP-3009 TransferWithAuthorization). Generated from WAVE's reference viem signer with a fixed key + fixed nonce, so EVERY WAVE SDK port (python/go/rust/ruby/ts) MUST reproduce these signatures and headers byte-for-byte. The private key is the universally-published Hardhat account #1 test key — NOT a secret; never use it for real funds.",
   "payerPrivateKey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
   "payerAddress": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
   "vectors": [

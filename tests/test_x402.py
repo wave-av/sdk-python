@@ -1,9 +1,9 @@
 """Conformance tests for wave.x402 (EIP-3009 "exact" scheme signing).
 
-These assert the Python signer is byte-for-byte compatible with the reference TypeScript helper in
-@wave-av/agent-money (the same viem stack the WAVE facilitator verifies against). The expected values
-live in tests/fixtures/x402_exact_vector.json — the canonical cross-language vector every WAVE SDK port
-must reproduce. Skips cleanly if the optional `eth-account` extra is not installed.
+These assert the Python signer is byte-for-byte compatible with WAVE's reference TypeScript x402 signer
+(the same viem stack the WAVE facilitator verifies against). The expected values live in
+tests/fixtures/x402_exact_vector.json — the canonical cross-language vector every WAVE SDK port must
+reproduce. Skips cleanly if the optional `eth-account` extra is not installed.
 """
 from __future__ import annotations
 
