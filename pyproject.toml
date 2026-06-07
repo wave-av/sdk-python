@@ -58,6 +58,9 @@ dependencies = [
 realtime = [
     "websocket-client>=1.0.0",
 ]
+x402 = [
+    "eth-account>=0.10.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
