@@ -1,0 +1,35 @@
+{
+  "_note": "Canonical cross-language conformance vector for the x402 'exact' scheme (EIP-3009 TransferWithAuthorization). Generated from WAVE's reference viem signer with a fixed key + fixed nonce, so EVERY WAVE SDK port (python/go/rust/ruby/ts) MUST reproduce these signatures and headers byte-for-byte. The private key is the universally-published Hardhat account #1 test key — NOT a secret; never use it for real funds.",
+  "payerPrivateKey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+  "payerAddress": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "vectors": [
+    {
+      "network": "base",
+      "domain": { "name": "USD Coin", "version": "2", "chainId": 8453, "verifyingContract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" },
+      "authorization": {
+        "from": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "to": "0x7543c839B9a96d1305d3A85464a5C6b0Cfcac406",
+        "value": "1000",
+        "validAfter": "0",
+        "validBefore": "1900000600",
+        "nonce": "0x1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "signature": "0xbb7a21133c199900dd949d5ae9cb929122f581c60359d7d3d89226b47469745e7cb0ffa5e18c5e97209a10d6adf365ce3f8f04ed75bb51e50ab8b4340a66c9171c",
+      "header": "eyJ4NDAyVmVyc2lvbiI6MSwic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiYmFzZSIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoiMHhiYjdhMjExMzNjMTk5OTAwZGQ5NDlkNWFlOWNiOTI5MTIyZjU4MWM2MDM1OWQ3ZDNkODkyMjZiNDc0Njk3NDVlN2NiMGZmYTVlMThjNWU5NzIwOWExMGQ2YWRmMzY1Y2UzZjhmMDRlZDc1YmI1MWU1MGFiOGI0MzQwYTY2YzkxNzFjIiwiYXV0aG9yaXphdGlvbiI6eyJmcm9tIjoiMHg3MDk5Nzk3MEM1MTgxMmRjM0EwMTBDN2QwMWI1MGUwZDE3ZGM3OUM4IiwidG8iOiIweDc1NDNjODM5QjlhOTZkMTMwNWQzQTg1NDY0YTVDNmIwQ2ZjYWM0MDYiLCJ2YWx1ZSI6IjEwMDAiLCJ2YWxpZEFmdGVyIjoiMCIsInZhbGlkQmVmb3JlIjoiMTkwMDAwMDYwMCIsIm5vbmNlIjoiMHgxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIn19fQ=="
+    },
+    {
+      "network": "base-sepolia",
+      "domain": { "name": "USDC", "version": "2", "chainId": 84532, "verifyingContract": "0x036cbd53842c5426634e7929541ec2318f3dcf7e" },
+      "authorization": {
+        "from": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "to": "0x7543c839B9a96d1305d3A85464a5C6b0Cfcac406",
+        "value": "1000",
+        "validAfter": "0",
+        "validBefore": "1900000600",
+        "nonce": "0x1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "signature": "0x2e8a204127425348d693ffb2f97f4839e313f33a45728cee729d7b65b585b33868bb0893b6855ca2ce1c857b7031e5c39c8bcf4c4ff4d1b948d8036b0b7dedb01c",
+      "header": "eyJ4NDAyVmVyc2lvbiI6MSwic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiYmFzZS1zZXBvbGlhIiwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiIweDJlOGEyMDQxMjc0MjUzNDhkNjkzZmZiMmY5N2Y0ODM5ZTMxM2YzM2E0NTcyOGNlZTcyOWQ3YjY1YjU4NWIzMzg2OGJiMDg5M2I2ODU1Y2EyY2UxYzg1N2I3MDMxZTVjMzljOGJjZjRjNGZmNGQxYjk0OGQ4MDM2YjBiN2RlZGIwMWMiLCJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDcwOTk3OTcwQzUxODEyZGMzQTAxMEM3ZDAxYjUwZTBkMTdkYzc5QzgiLCJ0byI6IjB4NzU0M2M4MzlCOWE5NmQxMzA1ZDNBODU0NjRhNUM2YjBDZmNhYzQwNiIsInZhbHVlIjoiMTAwMCIsInZhbGlkQWZ0ZXIiOiIwIiwidmFsaWRCZWZvcmUiOiIxOTAwMDAwNjAwIiwibm9uY2UiOiIweDExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEifX19"
+    }
+  ]
+}

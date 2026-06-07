@@ -58,6 +58,9 @@ from wave.usb import UsbAPI
 # P3 new modules
 from wave.vault import VaultAPI
 from wave.voice import VoiceAPI
+
+# x402 agent payments (signing needs the optional [x402] extra; the import itself is dependency-free)
+from wave.x402 import encode_exact_payment_header, sign_exact_authorization
 from wave.zoom import ZoomAPI
 
 __version__ = "2.1.0"
@@ -84,6 +87,8 @@ __all__ = [
     "PodcastAPI", "SlidesAPI", "UsbAPI",
     # Cross-cutting
     "NotificationsAPI", "DrmAPI",
+    # x402 agent payments
+    "sign_exact_authorization", "encode_exact_payment_header",
 ]
 
 
