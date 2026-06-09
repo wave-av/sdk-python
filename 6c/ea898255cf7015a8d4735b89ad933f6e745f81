@@ -1,0 +1,19 @@
+pyproject.toml
+  s_5f27fa5b8237cd::t_8539715af3514f 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6cea898255cf7015a8d4735b89ad933f6e745f81",
+  "prompts": {},
+  "sessions": {
+    "s_5f27fa5b8237cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "15ec0bf8-6164-4260-bae1-00c610d449bb",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
