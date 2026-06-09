@@ -73,8 +73,8 @@ dev = [
 [project.urls]
 Homepage = "https://docs.wave.online/sdk/python"
 Documentation = "https://docs.wave.online/sdk/python"
-Repository = "https://github.com/wave-av/wave-surfer-connect"
-Issues = "https://github.com/wave-av/wave-surfer-connect/issues"
+Repository = "https://github.com/wave-av/sdk-python"
+Issues = "https://github.com/wave-av/sdk-python/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
