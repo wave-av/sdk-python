@@ -11,11 +11,10 @@ from __future__ import annotations
 
 import sys
 import types
-
-import pytest
-
 from wave.client import WaveClient
 from wave.realtime import RealtimeAPI
+
+import pytest
 
 
 class _FakeSocket:
