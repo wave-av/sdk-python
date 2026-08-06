@@ -125,6 +125,25 @@ for case in "no argument at all::" "nonexistent path::$TMP/does-not-exist.txt"; 
   fi
 done
 
+# An empty GUARD_PRIVATE_REPOS is a documented local convenience but FAILS CLOSED
+# in CI (GITHUB_ACTIONS set): a missing or renamed org variable must go red, never
+# silently skip the private-repo rule and report a pass over an unscanned class.
+printf '%s\n' 'Ordinary clean body with nothing to find.' > "$TMP/body.txt"
+env -u GUARD_PRIVATE_REPOS GITHUB_ACTIONS=true bash "$SCRIPT" "$TMP/body.txt" >/dev/null 2>&1
+rc=$?
+if [[ "$rc" == 2 ]]; then
+  PASS=$((PASS+1)); printf '  ok   %s → exit 2 (fails closed)\n' 'GUARD_PRIVATE_REPOS unset in CI'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL %s: want exit 2, got %s\n' 'GUARD_PRIVATE_REPOS unset in CI' "$rc"
+fi
+env -u GUARD_PRIVATE_REPOS -u GITHUB_ACTIONS bash "$SCRIPT" "$TMP/body.txt" >/dev/null 2>&1
+rc=$?
+if [[ "$rc" == 0 ]]; then
+  PASS=$((PASS+1)); printf '  ok   %s → exit 0 (rule skipped)\n' 'GUARD_PRIVATE_REPOS unset locally'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL %s: want exit 0, got %s\n' 'GUARD_PRIVATE_REPOS unset locally' "$rc"
+fi
+
 echo "  ---"
 if (( FAIL > 0 )); then
   echo "  $PASS passed, $FAIL FAILED"; exit 1

@@ -55,7 +55,8 @@ permissions:
 # A workflow-level group would force one policy on both, and it showed: comment and
 # issue events (which the tree job skips entirely) cancelled in-flight tree scans,
 # so a chatty review thread could leave a head SHA with NO completed tree verdict.
-# Per-job groups end that: only same-PR pull_request events enter the tree group.
+# Per-job groups end that: only same-PR pull_request and review events enter the
+# tree group.
 # Within that group, a body edit or new push still supersedes an in-flight tree run
 # — deliberately. The replacement scans the same (or newer) head SHA and always
 # lands a completed verdict, and GitHub evaluates the most recent check run per
@@ -66,13 +67,18 @@ jobs:
     name: Secrets + content policy
     # Skips issue/comment events (the tree scan has nothing to say about a comment,
     # and the org should not pay for a gitleaks run every time anyone posts one).
-    # Deliberately does NOT skip `edited`: a title/body edit doesn't change the
-    # tree, but a skipped job still publishes a check run for the same head SHA,
-    # and GitHub treats skipped as passing and evaluates the MOST RECENT check run
-    # per name — so skipping here would let a description edit supersede a failing
-    # tree scan with a green rubber stamp. Re-running just reproduces the verdict.
+    # That is safe ONLY because those runs report the DEFAULT branch, not the PR
+    # head. Review events are different: they run in the PR's context and publish
+    # a check run on the PR HEAD SHA, and a job skipped by `if` still publishes
+    # one with conclusion `skipped`, which GitHub treats as passing while
+    # evaluating the MOST RECENT check run per name. Skipping them would let any
+    # review comment supersede a failing tree scan with a green rubber stamp, so
+    # they re-run the tree scan instead (same reason `edited` is not skipped:
+    # re-running just reproduces the verdict).
     if: >-
       github.event_name == 'pull_request'
+      || github.event_name == 'pull_request_review'
+      || github.event_name == 'pull_request_review_comment'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
     concurrency:

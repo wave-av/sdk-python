@@ -128,7 +128,11 @@ check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(s
 # of what is wired to what, and it is the shape that actually leaked.
 #
 # Names are NOT hardcoded (this file is public); CI injects them via the
-# GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped.
+# GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped. In CI
+# (GITHUB_ACTIONS set) an empty variable FAILS CLOSED instead: a missing or
+# renamed org variable would otherwise silently skip this rule and report a
+# pass over an unscanned leak class: a green rubber stamp, not a verdict.
+_ALT=''
 if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
   # The credential-NAME alternative is SCREAMING_CASE on purpose (that is how a
   # binding name is written; `session_token` in prose is just code talk), so it
@@ -136,7 +140,6 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
   # get their own scoped (?i:) — never a global flag, which would silently make
   # the SCREAMING_CASE branch match lowercase identifiers too.
   OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|(?i:wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding)|\d{2,}\s+secrets)'
-  _ALT=''
   IFS=', ' read -r -a _PRIV <<< "$GUARD_PRIVATE_REPOS"
   for _name in "${_PRIV[@]}"; do
     [[ -z "$_name" ]] && continue
@@ -144,18 +147,21 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
     _esc="$(printf '%s' "$_name" | sed -E 's/[][(){}.^$*+?|\\]/\\&/g')"
     _ALT="${_ALT:+$_ALT|}${_esc}"
   done
-  if [[ -n "$_ALT" ]]; then
-    # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
-    # scoped to the repo NAMES only — see the OPS_DETAIL comment above.
-    # No \b in front of OPS_DETAIL in either branch: for a multi-segment name
-    # like WAVE_VIEWPORT_LEASE_SECRET the credential alternative can only match
-    # the trailing LEASE_SECRET, and that position is NOT a word boundary
-    # (underscore is a word character) — a \b there silently drops every
-    # compound credential name from the name-first order.
-    check BLOCK private-repo-ops \
-      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
-      'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' prose
-  fi
+fi
+if [[ -n "$_ALT" ]]; then
+  # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
+  # scoped to the repo NAMES only — see the OPS_DETAIL comment above.
+  # No \b in front of OPS_DETAIL in either branch: for a multi-segment name
+  # like WAVE_VIEWPORT_LEASE_SECRET the credential alternative can only match
+  # the trailing LEASE_SECRET, and that position is NOT a word boundary
+  # (underscore is a word character) — a \b there silently drops every
+  # compound credential name from the name-first order.
+  check BLOCK private-repo-ops \
+    "\\b(?i:${_ALT})\\b[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
+    'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' prose
+elif [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  echo "::error title=public-repo-guard (private-repo-ops)::GUARD_PRIVATE_REPOS is empty: the org/repo variable is missing, renamed, or contains no names. Refusing to report a pass over an unscanned leak class; configure the variable (fails closed in CI only)."
+  exit 2
 fi
 
 if (( VIOLATIONS > 0 )); then
