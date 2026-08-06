@@ -18,13 +18,18 @@
 # Exit: 0 clean · 1 blocking violation · 2 scanner error (fail closed).
 #
 # Allowlisting: a line carrying `guard:allow <reason>` is exempt (an accidental
-# leak never carries the marker; a deliberate one is visible in a public diff), as
-# is any line matching the ABOUT-THE-CONTROL allowlist below.
+# leak never carries the marker; a deliberate one is visible in a public diff).
+# The ABOUT-THE-CONTROL allowlist below additionally exempts the HEURISTIC prose
+# rules only — a credential format is a leak no matter what else the line says.
 set -uo pipefail
 
 FILE="${1:-}"
 [[ -n "$FILE" && -f "$FILE" ]] || { echo "::error::body-policy: usage: body-policy.sh <file>"; exit 2; }
 command -v rg >/dev/null 2>&1 || { echo "::error::body-policy: ripgrep (rg) required"; exit 2; }
+# Every rule here is -P (PCRE2). Distro rg packages are sometimes built without
+# it; that build fails every scan with exit 2, so refuse it up front with a
+# message that says WHY instead of 21 opaque "ripgrep failed" annotations.
+rg --pcre2-version >/dev/null 2>&1 || { echo "::error::body-policy: this ripgrep build lacks PCRE2 (-P) — install a PCRE2-capable rg"; exit 2; }
 
 VIOLATIONS=0
 
@@ -32,11 +37,19 @@ VIOLATIONS=0
 # the gate blocks its own pull requests and every security discussion — the
 # self-referential trap that gets a gate switched off. Ported verbatim in intent
 # from the client-side gate's allowlist, which was built for exactly this.
+#
+# SCOPE: only rules that opt in via the `prose` flag honour this allowlist — the
+# HEURISTIC rules, whose matches are ordinary words that genuinely occur when
+# discussing the gate. The credential-format and infrastructure rules never
+# honour it: a real key is a leak even on a line that names SECURITY.md, and
+# exempting it there would make "mention the policy" a one-line bypass.
 ABOUT_THE_CONTROL='(public-repo-guard|body-policy|content-policy|public-github-write-gate|\bNDA\s+(gate|guard|policy|denylist|sweep|scan|hook)\b|\bno\s+NDA\b|responsib\w*\s+disclos|SECURITY\.md)'
 
-# check <BLOCK|WARN> <name> <regex> <why>
+# check <BLOCK|WARN> <name> <regex> <why> [prose]
+#   The optional 5th arg `prose` marks a HEURISTIC rule whose hits may also be
+#   legitimate discussion of the gate itself; only those honour ABOUT_THE_CONTROL.
 check() {
-  local sev="$1" name="$2" re="$3" why="$4"
+  local sev="$1" name="$2" re="$3" why="$4" scope="${5:-}"
   [[ -z "$re" ]] && { echo "::error::body-policy: internal bug — empty regex for rule '$name'"; exit 2; }
   # rg exit: 0=match, 1=no match, >=2=real error → FAIL CLOSED. A gate that passes
   # because its scanner broke is worse than no gate: it reports success.
@@ -51,8 +64,10 @@ check() {
   # disagree with itself depending on where it ran. rg is already required above.
   local matches
   matches="$(printf '%s' "$raw" \
-    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' \
-    | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' || true)"
+  if [[ "$scope" == "prose" ]]; then
+    matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+  fi
   [[ -z "$matches" ]] && return 0
   local count; count="$(printf '%s\n' "$matches" | grep -c '')"
   # Print the LINE NUMBER only — never the matched text. This annotation is itself
@@ -97,7 +112,7 @@ check BLOCK abs-user-path    '/(Users|home)/(?!runner/)[a-z][a-z0-9._-]+/'    'O
 # A quoted marker is also a trivial bypass, and that is an accepted trade. The
 # threat here is the ACCIDENTAL paste; a deliberate evader has easier routes, and
 # `guard:allow <reason>` already exists as the honest, visible one.
-check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(share|publish|distribute)|for\s+internal\s+use)\b(?![”"'"'"'`])' 'Text self-identifies as not-for-public'
+check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(share|publish|distribute)|for\s+internal\s+use)\b(?![”"'"'"'`])' 'Text self-identifies as not-for-public' prose
 
 # --- Private repo + operational detail (PROXIMITY, not bare name) ------------
 # The BODY profile deliberately DIVERGES from the FILE profile here, and the
@@ -115,7 +130,12 @@ check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(s
 # Names are NOT hardcoded (this file is public); CI injects them via the
 # GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped.
 if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
-  OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding|\d{2,}\s+secrets)'
+  # The credential-NAME alternative is SCREAMING_CASE on purpose (that is how a
+  # binding name is written; `session_token` in prose is just code talk), so it
+  # must stay case-SENSITIVE. The phrase alternatives are ordinary English and
+  # get their own scoped (?i:) — never a global flag, which would silently make
+  # the SCREAMING_CASE branch match lowercase identifiers too.
+  OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|(?i:wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding)|\d{2,}\s+secrets)'
   _ALT=''
   IFS=', ' read -r -a _PRIV <<< "$GUARD_PRIVATE_REPOS"
   for _name in "${_PRIV[@]}"; do
@@ -125,10 +145,11 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
     _ALT="${_ALT:+$_ALT|}${_esc}"
   done
   if [[ -n "$_ALT" ]]; then
-    # Both orders: name-then-detail and detail-then-name.
+    # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
+    # scoped to the repo NAMES only — see the OPS_DETAIL comment above.
     check BLOCK private-repo-ops \
-      "(?i)\\b(?:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?:${_ALT})\\b" \
-      'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public'
+      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
+      'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' prose
   fi
 fi
 

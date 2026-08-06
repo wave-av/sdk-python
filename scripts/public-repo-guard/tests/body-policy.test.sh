@@ -59,6 +59,13 @@ expect 1 'AWS access key id' \
   "The failing job had ${AKID_FIXTURE} configured."
 expect 1 'internal tailscale IP' \
   'It resolves to 100.71.4.19 from inside the fleet.'
+# Regression: ABOUT_THE_CONTROL is scoped to the heuristic prose rules. A real
+# credential must block even when the same line talks about the gate — otherwise
+# "mention the policy" is a one-line bypass of every format rule.
+expect 1 'credential on a line that mentions the policy' \
+  "Discussing public-repo-guard: the key ${AKID_FIXTURE} was rotated."
+expect 1 'private key on a line citing SECURITY.md' \
+  'Per SECURITY.md: -----BEGIN RSA PRIVATE KEY-----'
 
 # --- must PASS (precision — these keep the gate deployable) -------------------
 expect 0 'bare private-repo cross-reference' \
@@ -67,6 +74,16 @@ expect 0 'two private repos, no operational detail' \
   'Both wave-gateway and wave-transports will need a follow-up for this.'
 expect 0 'credential NAME with no private repo nearby' \
   'The handler now reads SOME_API_TOKEN from the environment instead of a literal.'
+# Regression: the SCREAMING_CASE credential-name branch is case-SENSITIVE. A
+# global (?i) once leaked onto it and lowercase code talk near a repo name
+# (`session_token`) blocked ordinary prose — exactly the false-positive class
+# that gets a gate switched off.
+expect 0 'lowercase code identifier near a private repo' \
+  'The wave-gateway worker reads session_token from the request header.'
+expect 1 'repo name cased differently still pairs with a credential NAME' \
+  'Wave-Gateway now requires LEASE_SECRET at deploy time.'
+expect 0 'talking about the gate with a repo name and credential NAME' \
+  'body-policy blocks wave-gateway next to a SECRET_TOKEN; that is intended.'
 expect 0 'public runner path is not an operator path' \
   'CI checks out to /home/runner/work/repo/repo before the scan runs.'  # enforce-ignore (fixture)
 expect 0 'talking about the control' \
