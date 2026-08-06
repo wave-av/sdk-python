@@ -67,7 +67,7 @@ expect 1 'internal tailscale IP' \
 expect 1 'credential on a line that mentions the policy' \
   "Discussing public-repo-guard: the key ${AKID_FIXTURE} was rotated."
 expect 1 'private key on a line citing SECURITY.md' \
-  'Per SECURITY.md: -----BEGIN RSA PRIVATE KEY-----'
+  "Per SECURITY.md: -----BEGIN RSA ""PRIVATE KEY-----"  # pragma: allowlist secret (fixture, split like AKID above)
 
 # --- must PASS (precision — these keep the gate deployable) -------------------
 expect 0 'bare private-repo cross-reference' \
