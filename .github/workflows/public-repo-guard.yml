@@ -60,10 +60,14 @@ jobs:
   guard:
     name: Secrets + content policy
     # Skips issue/comment events (the tree scan has nothing to say about a comment,
-    # and the org should not pay for a gitleaks run every time anyone posts one) and
-    # skips `edited` (a title or body edit does not change the tree).
+    # and the org should not pay for a gitleaks run every time anyone posts one).
+    # Deliberately does NOT skip `edited`: a title/body edit doesn't change the
+    # tree, but a skipped job still publishes a check run for the same head SHA,
+    # and GitHub treats skipped as passing and evaluates the MOST RECENT check run
+    # per name — so skipping here would let a description edit supersede a failing
+    # tree scan with a green rubber stamp. Re-running just reproduces the verdict.
     if: >-
-      (github.event_name == 'pull_request' && github.event.action != 'edited')
+      github.event_name == 'pull_request'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
     concurrency:
