@@ -52,9 +52,14 @@ permissions:
   contents: read
 
 # Concurrency is per JOB, not per workflow: the two jobs want opposite behaviour.
-# A workflow-level group would force one policy on both, and it showed: rapid body
-# edits cancelled the tree job over and over, and every cancelled check-run stays
-# attached to the commit, so the PR reported UNSTABLE while the live runs were green.
+# A workflow-level group would force one policy on both, and it showed: comment and
+# issue events (which the tree job skips entirely) cancelled in-flight tree scans,
+# so a chatty review thread could leave a head SHA with NO completed tree verdict.
+# Per-job groups end that: only same-PR pull_request events enter the tree group.
+# Within that group, a body edit or new push still supersedes an in-flight tree run
+# — deliberately. The replacement scans the same (or newer) head SHA and always
+# lands a completed verdict, and GitHub evaluates the most recent check run per
+# name, so the superseded run's cancelled record is cosmetic, not load-bearing.
 
 jobs:
   guard:
