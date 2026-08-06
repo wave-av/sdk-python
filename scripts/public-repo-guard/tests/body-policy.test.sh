@@ -44,6 +44,11 @@ expect 1 'private repo + credential name' \
   'Flip is live: WAVE_VIEWPORT_LEASE_SECRET is bound on example-private-alpha now.'
 expect 1 'private repo + credential name, reverse order' \
   'The MOQ_JOIN_SECRET was added; example-private-bravo picks it up on deploy.'
+# Regression: a MULTI-segment credential name after the repo name. The rule can
+# only match the trailing LEASE_SECRET, which sits mid-word (after an
+# underscore) — a \b in front of OPS_DETAIL silently dropped this whole order.
+expect 1 'private repo, then compound credential name' \
+  'example-private-alpha now uses WAVE_VIEWPORT_LEASE_SECRET for renewals.'
 expect 1 'private repo + secret count' \
   'example-private-alpha went from 74 secrets to 75 after this change.'
 expect 1 'private repo + service binding' \

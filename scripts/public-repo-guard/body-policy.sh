@@ -147,8 +147,13 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
   if [[ -n "$_ALT" ]]; then
     # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
     # scoped to the repo NAMES only — see the OPS_DETAIL comment above.
+    # No \b in front of OPS_DETAIL in either branch: for a multi-segment name
+    # like WAVE_VIEWPORT_LEASE_SECRET the credential alternative can only match
+    # the trailing LEASE_SECRET, and that position is NOT a word boundary
+    # (underscore is a word character) — a \b there silently drops every
+    # compound credential name from the name-first order.
     check BLOCK private-repo-ops \
-      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
+      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
       'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' prose
   fi
 fi
