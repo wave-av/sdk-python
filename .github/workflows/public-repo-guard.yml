@@ -75,10 +75,15 @@ jobs:
     # review comment supersede a failing tree scan with a green rubber stamp, so
     # they re-run the tree scan instead (same reason `edited` is not skipped:
     # re-running just reproduces the verdict).
+    # Review events on a CLOSED PR are the one exception: nothing gates a closed
+    # PR, and refs/pull/N/merge goes stale after close, so checking it out can
+    # fail and paint a spurious red on the required check. A skipped run is
+    # harmless exactly there: a rubber stamp with nothing left to stamp.
     if: >-
       github.event_name == 'pull_request'
-      || github.event_name == 'pull_request_review'
-      || github.event_name == 'pull_request_review_comment'
+      || ((github.event_name == 'pull_request_review'
+           || github.event_name == 'pull_request_review_comment')
+          && github.event.pull_request.state == 'open')
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
     concurrency:
