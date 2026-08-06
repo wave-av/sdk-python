@@ -74,10 +74,13 @@ jobs:
           BASE="${PR_BASE_SHA:-}"
           [ -n "$BASE" ] || BASE="${PUSH_BEFORE_SHA:-}"
           # A base can be PRESENT and still unusable: a force-push leaves `github.event.before`
-          # pointing at a commit this checkout no longer contains.
+          # pointing at a commit this checkout no longer contains. There is no way to recover the
+          # per-PUSH range from an unreachable before-sha, and `HEAD~1` is a per-COMMIT base: it
+          # would scan only the newest commit and silently skip every other commit the rewritten
+          # push introduced. Clear the base and fail closed via the empty-tree scan below.
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
              || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            BASE="$(git rev-parse --verify --quiet 'HEAD~1' || true)"
+            BASE=""
           fi
           # FIX 5 — fail CLOSED. This previously fell back to `BASE=HEAD`, and `--changed HEAD`
           # diffs HEAD against itself: an empty diff, zero files scanned, job green. With no
@@ -87,7 +90,7 @@ jobs:
           # the diff path with an empty base keeps every detector in play.)
           if [ -z "$BASE" ]; then
             BASE="$(git hash-object -t tree /dev/null)"
-            echo "::notice::no diff base resolved (root commit or unreachable before-sha) — scanning the whole tree against the empty tree"
+            echo "::notice::no usable diff base (branch creation, root commit, or force-push with unreachable before-sha) — scanning the whole tree against the empty tree"
           fi
           echo "diffing against $BASE"
           exec node "$ENFORCE" --changed "$BASE"
