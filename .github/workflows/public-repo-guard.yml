@@ -13,11 +13,12 @@ name: public-repo-guard
 # wave-av/.github must not be able to alter another repo's secret scanner). The
 # gitleaks binary is version-pinned AND SHA-256-verified before it runs.
 #
-# To install on a new repo, copy all four files together:
+# To install on a new repo, copy all five files together:
 #   .github/workflows/public-repo-guard.yml
 #   .gitleaks.toml
 #   scripts/public-repo-guard/content-policy.sh
 #   scripts/public-repo-guard/body-policy.sh
+#   scripts/public-repo-guard/tests/body-policy.test.sh
 #
 # Scan scope: the published working TREE (gitleaks --no-git), NOT git history. The
 # goal is "what is public right now is clean", so a shallow checkout is sufficient.
@@ -33,6 +34,13 @@ on:
   issues:
     types: [opened, edited]
   issue_comment:
+    types: [created, edited]
+  # Review summaries and review-thread comments are just as world-readable as the
+  # PR body, and `issue_comment` does NOT fire for them — only for top-level PR
+  # comments. Without these two triggers, review text went unscanned.
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
     types: [created, edited]
   push:
     branches: [main, master]
@@ -117,8 +125,8 @@ jobs:
         run: bash scripts/public-repo-guard/tests/body-policy.test.sh
 
   # The other half of a public repo's surface. `guard` above scans the published
-  # TREE; a PR/issue/comment BODY is just as world-readable and, until this job,
-  # was scanned by nothing server-side. That gap was real, not theoretical: a PR
+  # TREE; a PR/issue/comment/review BODY is just as world-readable and, until
+  # this job, was scanned by nothing server-side. That gap was real, not theoretical: a PR
   # was blocked for naming a private repo in wrangler.toml while the very same
   # name, with more operational detail attached, sat unchallenged in its body.
   #
@@ -128,7 +136,12 @@ jobs:
   # can stop that class before publication.
   body-guard:
     name: Body content policy
-    if: github.event_name == 'pull_request' || github.event_name == 'issues' || github.event_name == 'issue_comment'
+    if: >-
+      github.event_name == 'pull_request'
+      || github.event_name == 'issues'
+      || github.event_name == 'issue_comment'
+      || github.event_name == 'pull_request_review'
+      || github.event_name == 'pull_request_review_comment'
     concurrency:
       # Keyed on the specific PR / comment / issue rather than github.ref, because
       # issue events all report the default branch and a ref-keyed group would let
@@ -174,12 +187,13 @@ jobs:
           # An UNRECOGNIZED payload shape must fail, never quietly scan nothing and
           # report a pass. If the event schema ever moves, this job must go red
           # rather than become a green rubber stamp over an unscanned body.
-          if [ "$(jq -r 'has("pull_request") or has("issue") or has("comment")' "$GITHUB_EVENT_PATH")" != "true" ]; then
-            echo "::error title=public-repo-guard (body-guard)::Event payload contains no pull_request/issue/comment object — refusing to report a pass on an unscanned body."
+          if [ "$(jq -r 'has("pull_request") or has("issue") or has("comment") or has("review")' "$GITHUB_EVENT_PATH")" != "true" ]; then
+            echo "::error title=public-repo-guard (body-guard)::Event payload contains no pull_request/issue/comment/review object — refusing to report a pass on an unscanned body."
             exit 1
           fi
           jq -r '[.pull_request.title, .pull_request.body,
                   .issue.title, .issue.body,
+                  .review.body,
                   .comment.body]
                  | map(select(. != null)) | join("\n")' \
             "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/bodyscan/body.txt"
