@@ -156,12 +156,21 @@ jobs:
   # can stop that class before publication.
   body-guard:
     name: Body content policy
+    # Review events on a CLOSED PR are excluded for the same reason as in `guard`
+    # above: refs/pull/N/merge goes stale after close, so the checkout can fail
+    # and paint a spurious red on the PR. The cost is a detection gap — a review
+    # comment on a closed PR goes unscanned server-side — accepted because a
+    # guaranteed-flaky red is worse than no verdict, and the pre-write hook is
+    # the control that stops that class before publication anyway. (Comments on
+    # closed PRs still arrive as `issue_comment` and ARE scanned; only review
+    # summaries and review-thread comments are affected.)
     if: >-
       github.event_name == 'pull_request'
       || github.event_name == 'issues'
       || github.event_name == 'issue_comment'
-      || github.event_name == 'pull_request_review'
-      || github.event_name == 'pull_request_review_comment'
+      || ((github.event_name == 'pull_request_review'
+           || github.event_name == 'pull_request_review_comment')
+          && github.event.pull_request.state == 'open')
     concurrency:
       # Keyed on the MOST SPECIFIC object in the payload, and the comment/review id
       # must come FIRST: `pull_request_review` and `pull_request_review_comment`
