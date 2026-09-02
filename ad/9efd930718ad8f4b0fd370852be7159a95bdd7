@@ -1,0 +1,57 @@
+wave/mail.py
+  s_4657dee555390b::t_63b0b98d896e88 1-61
+wave/inference.py
+  s_4657dee555390b::t_faaaac7291af5d 130-131
+  s_4657dee555390b::t_0e055410fbdbe4 1-75,77-129
+  s_4657dee555390b::t_a7c3fc43738c9c 76
+wave/__init__.py
+  s_4657dee555390b::t_61b4627cc834a6 32-33,36,40,48,61
+  s_4657dee555390b::t_f75a9f2e1794d4 96-97
+  s_4657dee555390b::t_cd7a89f97e045a 182-195
+tests/test_contract_coverage.py
+  s_4657dee555390b::t_0fbba6cf61d8e3 1-163
+README.md
+  s_4657dee555390b::t_6e773f9b9da805 97-115
+  s_4657dee555390b::t_3bcc0cf8f15a47 42
+  s_4657dee555390b::t_04da03784b2ceb 36-39
+tests/test_readme_quickstart.py
+  s_4657dee555390b::t_6258274da5972c 1-25
+wave/pricing.py
+  s_4657dee555390b::t_5153d22af2d2c4 1-78
+wave/meter.py
+  s_4657dee555390b::t_9459a9b45136c8 1-82
+wave/perception.py
+  s_4657dee555390b::t_5b8d0a9c2a78bf 1-130
+tests/test_sdk_exports.py
+  s_4657dee555390b::t_86f075a9f9a2b2 4,12,27-28,31-32,36,48,59-60
+  s_4657dee555390b::t_a122c3a5fbef1c 126-134,137-138,142
+  s_4657dee555390b::t_2acefa9881dcdd 188
+  s_4657dee555390b::t_78768f2544c3e2 170,172
+pyproject.toml
+  s_4657dee555390b::t_aab730558e465e 7-8
+CHANGELOG.md
+  s_4657dee555390b::t_b0c1b614584bed 8-52
+tests/test_parity_apis.py
+  s_4657dee555390b::t_1e09369f598be8 1-267
+  s_4657dee555390b::t_3d7f43167f2809 268-270
+tests/fixtures/openapi_snapshot.json
+  s_4657dee555390b::t_a57f03072690a4 1-383
+wave/transcripts.py
+  s_4657dee555390b::t_806378ffb9b3a4 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "ad9efd930718ad8f4b0fd370852be7159a95bdd7",
+  "prompts": {},
+  "sessions": {
+    "s_4657dee555390b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c714314b-1edf-4e54-a112-2a97f2377df1",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
