@@ -33,9 +33,13 @@ device = wave.prism.create_device(
 
 # Get analytics
 viewers = wave.pulse.get_viewer_analytics(time_range="24h")
+
+# Send a transcript email (mail:write) and read the usage ledger (meter:read)
+wave.mail.transcript_email(to="alice@example.com", transcript="...")
+ledger = wave.meter.ledger(channel="mail")
 ```
 
-## All 33 APIs
+## All 42 APIs
 
 ### P1 - Core
 
@@ -89,6 +93,25 @@ viewers = wave.pulse.get_viewer_analytics(time_range="24h")
 | `wave.podcast` | Podcast production |
 | `wave.slides`  | Slides-to-video    |
 | `wave.usb`     | USB relay          |
+
+### Cross-cutting
+
+| API                  | Description                                    |
+| -------------------- | ----------------------------------------------- |
+| `wave.notifications` | User notifications, preferences, delivery       |
+| `wave.drm`           | Digital rights management                       |
+| `wave.realtime`      | Live control and event plane (WebSocket)        |
+
+### Agent-native and comms productization (2.1.0)
+
+| API                | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| `wave.transcripts` | The voice-agent transcript (list + read)                     |
+| `wave.mail`        | Send, reply, search, transcript email, and SMS               |
+| `wave.meter`       | Read-only usage ledger and rollup (`meter:read`)              |
+| `wave.pricing`     | The seller tier-manifest registry (`pricing:read`/`:write`)   |
+| `wave.perception`  | Agentic live-media `subscribe()` control plane                |
+| `wave.inference`   | One completion endpoint through the measured funnel           |
 
 ## Error handling
 

@@ -29,11 +29,15 @@ from wave.editor import EditorAPI
 # P2 modules
 from wave.fleet import FleetAPI
 from wave.ghost import GhostAPI
+from wave.inference import InferenceAPI
+from wave.mail import MailAPI
 from wave.marketplace import MarketplaceAPI
 from wave.mesh import MeshAPI
+from wave.meter import MeterAPI
 
 # Cross-cutting
 from wave.notifications import NotificationsAPI
+from wave.perception import PerceptionAPI
 from wave.phone import PhoneAPI
 
 # P1 modules
@@ -41,6 +45,7 @@ from wave.pipeline import PipelineAPI
 
 # P4 modules
 from wave.podcast import PodcastAPI
+from wave.pricing import PricingAPI
 from wave.prism import PrismAPI
 from wave.pulse import PulseAPI
 from wave.qr import QrAPI
@@ -53,6 +58,7 @@ from wave.slides import SlidesAPI
 from wave.studio import StudioAPI
 from wave.studio_ai import StudioAIAPI
 from wave.transcribe import TranscribeAPI
+from wave.transcripts import TranscriptAPI
 from wave.usb import UsbAPI
 
 # P3 new modules
@@ -87,6 +93,8 @@ __all__ = [
     "PodcastAPI", "SlidesAPI", "UsbAPI",
     # Cross-cutting
     "NotificationsAPI", "DrmAPI",
+    # E5 comms productization + agentic surfaces (2.1.0 parity)
+    "TranscriptAPI", "MailAPI", "MeterAPI", "PricingAPI", "PerceptionAPI", "InferenceAPI",
     # x402 agent payments
     "sign_exact_authorization", "encode_exact_payment_header",
 ]
@@ -171,3 +179,17 @@ class Wave:
 
         # Realtime — live control & event plane (WebSocket)
         self.realtime = RealtimeAPI(self.client)
+
+        # Transcripts — the voice-agent transcript (list + read)
+        self.transcripts = TranscriptAPI(self.client)
+
+        # Mail — send, reply, search, transcript email, and SMS (E5)
+        self.mail = MailAPI(self.client)
+
+        # Meter — read-only usage ledger and rollup (E5, meter:read)
+        self.meter = MeterAPI(self.client)
+        self.pricing = PricingAPI(self.client)
+
+        # Perception — agentic live-media subscribe() control plane
+        self.perception = PerceptionAPI(self.client)
+        self.inference = InferenceAPI(self.client)

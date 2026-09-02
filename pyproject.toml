@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wave-sdk"
-version = "2.0.0"
-description = "Official WAVE SDK for Python - 33 API modules for streaming, production, analytics, and more"
+version = "2.1.0"
+description = "Official WAVE SDK for Python - 42 API modules for streaming, production, analytics, and more"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"

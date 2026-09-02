@@ -1,7 +1,7 @@
 """
 SDK Export Verification Tests
 
-Validates that all 33 SDK modules import correctly, all API classes
+Validates that all 39 SDK modules import correctly, all API classes
 instantiate with WaveClient, and the Wave convenience class wires everything.
 """
 
@@ -9,7 +9,7 @@ import pytest
 
 
 def test_all_modules_import():
-    """All 33 API modules should be importable from wave package."""
+    """All 39 API modules should be importable from wave package."""
     from wave import (
         AudienceAPI,
         CaptionsAPI,
@@ -24,11 +24,16 @@ def test_all_modules_import():
         EditorAPI,
         FleetAPI,
         GhostAPI,
+        InferenceAPI,
+        MailAPI,
         MarketplaceAPI,
         MeshAPI,
+        MeterAPI,
+        PerceptionAPI,
         PhoneAPI,
         PipelineAPI,
         PodcastAPI,
+        PricingAPI,
         PrismAPI,
         PulseAPI,
         QrAPI,
@@ -40,6 +45,7 @@ def test_all_modules_import():
         StudioAIAPI,
         StudioAPI,
         TranscribeAPI,
+        TranscriptAPI,
         UsbAPI,
         VaultAPI,
         VoiceAPI,
@@ -50,6 +56,8 @@ def test_all_modules_import():
     assert callable(PipelineAPI)
     assert callable(PrismAPI)
     assert callable(UsbAPI)
+    assert callable(MailAPI)
+    assert callable(InferenceAPI)
 
 
 def test_wave_client_import():
@@ -115,13 +123,23 @@ def test_wave_convenience_class():
     assert hasattr(w, 'slides')
     assert hasattr(w, 'usb')
 
+    # 2.1.0 parity additions (TS namespace parity)
+    assert hasattr(w, 'realtime')
+    assert hasattr(w, 'transcripts')
+    assert hasattr(w, 'mail')
+    assert hasattr(w, 'meter')
+    assert hasattr(w, 'pricing')
+    assert hasattr(w, 'perception')
+    assert hasattr(w, 'inference')
+
 
 def test_api_count():
-    """Wave class should have exactly 33 API bindings (+ client)."""
+    """Wave class should have exactly 42 API bindings (+ client) — parity with the
+    TS SDK's 42 Wave-facade namespaces (43 including the base client)."""
     from wave import Wave
     w = Wave(api_key="test-key")
     api_attrs = [a for a in dir(w) if not a.startswith('_') and a != 'client']
-    assert len(api_attrs) == 33, f"Expected 33 APIs, got {len(api_attrs)}: {api_attrs}"
+    assert len(api_attrs) == 42, f"Expected 42 APIs, got {len(api_attrs)}: {api_attrs}"
 
 
 def test_pipeline_has_methods():
@@ -149,9 +167,9 @@ def test_studio_has_methods():
 
 
 def test_version():
-    """SDK version should be 2.0.0."""
+    """SDK version should be 2.1.0."""
     import wave
-    assert wave.__version__ == "2.0.0"
+    assert wave.__version__ == "2.1.0"
 
 
 def test_all_exports():
@@ -167,6 +185,7 @@ def test_all_exports():
         "VaultAPI", "MarketplaceAPI", "ConnectAPI", "DistributionAPI",
         "DesktopAPI", "SignageAPI", "QrAPI", "AudienceAPI", "CreatorAPI",
         "PodcastAPI", "SlidesAPI", "UsbAPI",
+        "TranscriptAPI", "MailAPI", "MeterAPI", "PricingAPI", "PerceptionAPI", "InferenceAPI",
     ]
     for cls in expected:
         assert cls in wave.__all__, f"{cls} missing from __all__"
