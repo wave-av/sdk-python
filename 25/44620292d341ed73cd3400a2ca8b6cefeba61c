@@ -1,0 +1,27 @@
+wave_sdk/client.py
+  s_4657dee555390b::t_bb52b3d4bf2bd1 129
+.github/workflows/smoke-install.yml
+  s_4657dee555390b::t_838819dea21f87 1-78
+scripts/smoke_quickstart.py
+  s_4657dee555390b::t_64a401de069fa4 1-74
+wave_sdk/__init__.py
+  s_4657dee555390b::t_967dd4a22601b0 17
+  s_4657dee555390b::t_01af1939531d9f 4-8
+  s_4657dee555390b::t_27488517ed9b52 108-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "2544620292d341ed73cd3400a2ca8b6cefeba61c",
+  "prompts": {},
+  "sessions": {
+    "s_4657dee555390b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c714314b-1edf-4e54-a112-2a97f2377df1",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
