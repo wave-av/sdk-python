@@ -53,6 +53,11 @@ classifiers = [
 dependencies = [
     "httpx>=0.25.0",
     "pydantic>=2.0.0",
+    # pydantic 2.x needs this to resolve `str | None`-style PEP 604 unions on
+    # Python 3.9, where `str | None` cannot be `eval()`'d natively (the SDK's
+    # models use `from __future__ import annotations` + the new union syntax
+    # for readability; requires-python allows 3.9, so this isn't optional).
+    "eval-type-backport>=0.2.0; python_version < '3.10'",
 ]
 
 [project.optional-dependencies]

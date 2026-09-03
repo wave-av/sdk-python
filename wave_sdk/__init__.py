@@ -10,6 +10,7 @@ Example:
     >>> streams = client.pipeline.list()
     >>> clips = client.clips.list()
 """
+from __future__ import annotations
 
 from wave_sdk.audience import AudienceAPI
 from wave_sdk.captions import CaptionsAPI
