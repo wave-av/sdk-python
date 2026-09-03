@@ -6,7 +6,26 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
-## [2.1.0] - 2026-09-01
+## [2.1.0] - 2026-09-01 (not yet published to PyPI)
+
+### Fixed
+
+- **Critical**: the top-level installable package was named `wave`, which
+  collides with the Python standard library's own `wave` module (WAV audio
+  I/O, `Lib/wave.py`, present in every CPython install). Because the stdlib
+  is earlier on `sys.path` than `site-packages`, a fresh `pip install
+  wave-sdk` followed by the README's own `from wave import Wave` resolved
+  to the STDLIB module and raised `ImportError: cannot import name 'Wave'
+  from 'wave'` — on every supported Python version, in every environment
+  except the SDK's own repo checkout (where the checkout directory being
+  first on `sys.path` masked the collision during development and in the
+  test suite). Verified live against the published 2.0.0 wheel from PyPI in
+  two isolated interpreters (3.14, 3.12); see the accompanying PR's LIVE
+  RECEIPTS. The installable package is renamed `wave_sdk` (`pip install
+  wave-sdk` still works; `from wave_sdk import Wave` now actually resolves
+  to the SDK). This does not change the 2.0.0 contract on PyPI — 2.0.0 was
+  never fixable in place and 2.1.0 has not shipped yet, so this lands before
+  the collision reaches a published release.
 
 ### Added
 
@@ -41,7 +60,7 @@ to 42, matching the TS facade 1:1.
   2026-09-01) has a corresponding Python method, or is in a justified
   allowlist (new backend surfaces neither SDK wraps yet, or pre-existing
   studio-ai drift that predates this release).
-- `tests/test_readme_quickstart.py` - asserts every `wave.<namespace>.<method>`
+- `tests/test_readme_quickstart.py` - asserts every `client.<namespace>.<method>`
   call in the README's quickstart resolves to a real SDK method.
 - Updated `tests/test_sdk_exports.py` for the new API count (42 + client)
   and version (2.1.0).
@@ -50,3 +69,13 @@ to 42, matching the TS facade 1:1.
 
 - Bumped to 2.1.0 (additive, semver-minor): no existing method signature
   changed.
+
+## [2.0.0] - 2026-04-03
+
+Initial public release of the WAVE Python SDK on PyPI as `wave-sdk`: 35 `*API`
+classes covering streaming, production, analytics, and content workflows
+(verified against the published wheel's `wave/__init__.py`; the PyPI package
+`Summary` metadata for this release says "33 API modules", which undercounts
+by 2 — a pre-existing metadata typo baked into the immutable 2.0.0 upload,
+noted here rather than fixed retroactively since PyPI release metadata for a
+published version cannot be edited).

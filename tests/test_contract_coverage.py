@@ -145,7 +145,7 @@ def test_no_stale_mapping_or_allowlist_entries():
 
 
 def test_mapped_methods_exist_on_wave():
-    from wave import Wave
+    from wave_sdk import Wave
     w = Wave(api_key="test-key")
     missing = []
     for op_id, (namespace, method) in MAPPING.items():
