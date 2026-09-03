@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wave-sdk"
-version = "2.1.0"
+version = "3.0.0"
 description = "Official WAVE SDK for Python - 42 API modules for streaming, production, analytics, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -78,7 +78,7 @@ Issues = "https://github.com/wave-av/sdk-python/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["wave*"]
+include = ["wave_sdk*"]
 
 [tool.mypy]
 python_version = "3.9"
@@ -99,7 +99,7 @@ ignore = ["E501", "E701", "E702"]
 
 [tool.ruff.lint.per-file-ignores]
 # Public re-exports: the package __init__ exists to re-export the API surface.
-"wave/__init__.py" = ["F401"]
+"wave_sdk/__init__.py" = ["F401"]
 # Export-verification test imports every public symbol to assert it exists
 # (checked via __all__ / hasattr), so the names are intentionally "unused".
 "tests/test_sdk_exports.py" = ["F401"]

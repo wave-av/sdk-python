@@ -1,4 +1,4 @@
-"""Conformance tests for wave.x402 (EIP-3009 "exact" scheme signing).
+"""Conformance tests for wave_sdk.x402 (EIP-3009 "exact" scheme signing).
 
 These assert the Python signer is byte-for-byte compatible with WAVE's reference TypeScript x402 signer
 (the same viem stack the WAVE facilitator verifies against). The expected values live in
@@ -14,7 +14,7 @@ import pytest
 
 pytest.importorskip("eth_account", reason='x402 signing needs the extra: pip install "wave-sdk[x402]"')
 
-from wave.x402 import (  # noqa: E402  (after importorskip)
+from wave_sdk.x402 import (  # noqa: E402  (after importorskip)
     encode_exact_payment_header,
     get_network_config,
     random_nonce,

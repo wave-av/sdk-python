@@ -11,7 +11,7 @@ pip install wave-sdk
 ## Quick start
 
 ```python
-from wave import Wave
+from wave_sdk import Wave
 
 wave = Wave(api_key="your-api-key", organization_id="org_123")
 
@@ -116,7 +116,7 @@ ledger = wave.meter.ledger(channel="mail")
 ## Error handling
 
 ```python
-from wave import WaveError, RateLimitError
+from wave_sdk import WaveError, RateLimitError
 
 try:
     wave.pipeline.get("invalid-id")

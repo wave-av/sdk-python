@@ -11,7 +11,7 @@ CALL_RE = re.compile(r"\bwave\.(\w+)\.(\w+)\(")
 
 
 def test_readme_quickstart_calls_are_real():
-    from wave import Wave
+    from wave_sdk import Wave
     w = Wave(api_key="test-key")
     calls = sorted(set(CALL_RE.findall(README)))
     assert calls, "expected at least one wave.<namespace>.<method>(...) call in README.md"
