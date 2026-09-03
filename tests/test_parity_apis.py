@@ -5,15 +5,16 @@ the WaveClient method boundary (get/post/patch/delete) — no real network I/O.
 from __future__ import annotations
 
 from unittest.mock import MagicMock
-from wave.inference import InferenceAPI
-from wave.mail import MailAPI
-from wave.meter import MeterAPI
-from wave.perception import PerceptionAPI
-from wave.pricing import ManifestCreateResult, PricingAPI, PricingManifest, PricingTier
-from wave.transcripts import TranscriptAPI
 
 import httpx
 import pytest
+
+from wave_sdk.inference import InferenceAPI
+from wave_sdk.mail import MailAPI
+from wave_sdk.meter import MeterAPI
+from wave_sdk.perception import PerceptionAPI
+from wave_sdk.pricing import ManifestCreateResult, PricingAPI, PricingManifest, PricingTier
+from wave_sdk.transcripts import TranscriptAPI
 
 
 @pytest.fixture
@@ -223,7 +224,7 @@ def test_inference_complete(monkeypatch):
             "usage": {"cost": 0.0001, "total_tokens": 12},
         })
 
-    monkeypatch.setattr("wave.inference.httpx.post", fake_post)
+    monkeypatch.setattr("wave_sdk.inference.httpx.post", fake_post)
     api = InferenceAPI(FakeClient())
     result = api.complete("claude-haiku", [{"role": "user", "content": "hi"}])
     assert result.model == "claude-haiku"
@@ -238,9 +239,9 @@ def test_inference_complete_raises_on_error(monkeypatch):
     def fake_post(url, headers=None, json=None, timeout=None):
         return httpx.Response(500, text="funnel down")
 
-    monkeypatch.setattr("wave.inference.httpx.post", fake_post)
+    monkeypatch.setattr("wave_sdk.inference.httpx.post", fake_post)
     api = InferenceAPI(FakeClient())
-    from wave.client import WaveError
+    from wave_sdk.client import WaveError
     with pytest.raises(WaveError):
         api.complete("claude-haiku", [{"role": "user", "content": "hi"}])
 
@@ -250,7 +251,7 @@ def test_inference_models_requires_registry():
         api_key = "test-key"
 
     api = InferenceAPI(FakeClient())
-    from wave.client import WaveError
+    from wave_sdk.client import WaveError
     with pytest.raises(WaveError, match="registry_url"):
         api.models()
 
@@ -263,7 +264,7 @@ def test_inference_models_with_registry(monkeypatch):
         assert url.startswith("https://registry.example.com/rest/v1/models")
         return httpx.Response(200, json=[{"id": "m1", "rail": "openai", "cost_input_per_m": 1.0, "cost_output_per_m": 2.0}])
 
-    monkeypatch.setattr("wave.inference.httpx.get", fake_get)
+    monkeypatch.setattr("wave_sdk.inference.httpx.get", fake_get)
     api = InferenceAPI(FakeClient(), registry_url="https://registry.example.com", registry_key="k")
     models = api.models()
     assert models[0].id == "m1"

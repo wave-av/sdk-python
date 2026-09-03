@@ -1,6 +1,7 @@
 # WAVE SDK for Python
 
-Official Python SDK for the WAVE API by WAVE Inc.
+Media infrastructure for the agentic internet. Official Python SDK for WAVE, by
+WAVE Online, LLC.
 
 ## Installation
 
@@ -11,32 +12,19 @@ pip install wave-sdk
 ## Quick start
 
 ```python
-from wave import Wave
+from wave_sdk import Wave
 
-wave = Wave(api_key="your-api-key", organization_id="org_123")
+client = Wave(api_key="your-api-key", organization_id="org_123")
 
-# Create and start a live stream
-stream = wave.pipeline.create(title="My Stream", protocol="webrtc")
-wave.pipeline.start(stream.id)
-health = wave.pipeline.get_health(stream.id)
-print(f"Viewers: {health['viewer_count']}")
+# Search your organization's indexed media
+results = client.search.search(query="product launch")
 
-# Create a virtual camera from NDI
-device = wave.prism.create_device(
-    name="PTZ Camera 1",
-    type="camera",
-    source_protocol="ndi",
-    source_endpoint="NDI-CAM-1",
-    node_id="node_abc",
-    ptz_enabled=True,
-)
+# List your org's published pricing tiers (requires the pricing:read scope)
+manifests = client.pricing.list_manifests()
 
-# Get analytics
-viewers = wave.pulse.get_viewer_analytics(time_range="24h")
-
-# Send a transcript email (mail:write) and read the usage ledger (meter:read)
-wave.mail.transcript_email(to="alice@example.com", transcript="...")
-ledger = wave.meter.ledger(channel="mail")
+# Transcribe a recording and auto-generate captions for it
+transcription = client.transcribe.create(source_url="https://example.com/clip.mp4")
+captions = client.captions.generate(media_id=transcription.id, media_type="video")
 ```
 
 ## All 42 APIs
@@ -116,10 +104,10 @@ ledger = wave.meter.ledger(channel="mail")
 ## Error handling
 
 ```python
-from wave import WaveError, RateLimitError
+from wave_sdk import WaveError, RateLimitError
 
 try:
-    wave.pipeline.get("invalid-id")
+    client.clips.get("invalid-id")
 except RateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
 except WaveError as e:
@@ -134,4 +122,4 @@ except WaveError as e:
 
 ## License
 
-MIT - WAVE Inc.
+MIT - WAVE Online, LLC

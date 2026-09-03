@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
-    {name = "WAVE Inc.", email = "sdk@wave.online"}
+    {name = "WAVE Online, LLC", email = "sdk@wave.online"}
 ]
 keywords = [
     "wave",
@@ -44,6 +44,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
     "Topic :: Multimedia :: Sound/Audio",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -78,7 +79,7 @@ Issues = "https://github.com/wave-av/sdk-python/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["wave*"]
+include = ["wave_sdk*"]
 
 [tool.mypy]
 python_version = "3.9"
@@ -99,7 +100,7 @@ ignore = ["E501", "E701", "E702"]
 
 [tool.ruff.lint.per-file-ignores]
 # Public re-exports: the package __init__ exists to re-export the API surface.
-"wave/__init__.py" = ["F401"]
+"wave_sdk/__init__.py" = ["F401"]
 # Export-verification test imports every public symbol to assert it exists
 # (checked via __all__ / hasattr), so the names are intentionally "unused".
 "tests/test_sdk_exports.py" = ["F401"]
