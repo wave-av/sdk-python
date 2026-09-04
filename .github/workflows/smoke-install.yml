@@ -63,6 +63,18 @@ jobs:
           print('Wave facade OK,', len([n for n in dir(wave_sdk) if n.endswith('API')]), 'API classes')
           "
 
+      # The import check above proves `wave_sdk` is reachable. It does NOT prove we
+      # left CPython's `wave` alone -- the shipped 2.0.0 wheel passed an equivalent
+      # check in the configurations where the stdlib happened to win, and still broke
+      # `wave.open()` for every library in the environment wherever site-packages led
+      # sys.path. This step asserts both halves against the INSTALLED artifact.
+      - name: Copy the stdlib-shadow guard into the smoke venv
+        run: cp scripts/assert_stdlib_wave_intact.py "$RUNNER_TEMP/smoke/assert_stdlib_wave_intact.py"
+
+      - name: Assert `import wave` still resolves to the CPython stdlib
+        working-directory: ${{ runner.temp }}/smoke
+        run: bin/python assert_stdlib_wave_intact.py --dist wave-sdk --module wave_sdk
+
       - name: Copy quickstart into the smoke venv's working directory
         run: cp scripts/smoke_quickstart.py "$RUNNER_TEMP/smoke/smoke_quickstart.py"
 
