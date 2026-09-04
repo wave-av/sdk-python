@@ -7,7 +7,14 @@ name = "wave-sdk"
 version = "2.1.0"
 description = "Official WAVE SDK for Python - 42 API modules for streaming, production, analytics, and more"
 readme = "README.md"
-license = {text = "MIT"}
+# Apache-2.0 is the repo's actual license: the LICENSE file is the Apache 2.0
+# text and NOTICE carves the WAVE marks out of that grant. This field said "MIT"
+# from the initial commit (1b7be39) and was missed when the repo adopted
+# Apache-2.0 (99d81d3), so every built wheel shipped `License: MIT` metadata
+# next to an Apache-2.0 LICENSE file inside the SAME dist-info. Kept as
+# `{text = ...}` rather than a bare PEP 639 SPDX string because the build
+# requirement here is setuptools>=61, and the SPDX form needs setuptools>=77.
+license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
 authors = [
     {name = "WAVE Online, LLC", email = "sdk@wave.online"}
@@ -37,7 +44,7 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -74,6 +81,9 @@ dev = [
     "mypy>=1.0.0",
     "ruff>=0.1.0",
     "black>=23.0.0",
+    # tests/test_packaging.py reads this file back to assert the shipped metadata
+    # matches the repo (name/version/license). tomllib is stdlib from 3.11 only.
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.urls]
