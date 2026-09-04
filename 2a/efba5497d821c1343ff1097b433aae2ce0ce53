@@ -1,0 +1,25 @@
+scripts/assert_stdlib_wave_intact.py
+  s_418f585ff58cb5::t_d0ab015a97ec61 1-60,62-107,109-111,116-163,165-254
+  s_418f585ff58cb5::t_e263dbf651af0a 61
+  s_418f585ff58cb5::t_7a1ca1c7a990f0 108,112-115
+  s_418f585ff58cb5::t_6f5ef2fea91ec3 164
+.github/workflows/smoke-install.yml
+  s_418f585ff58cb5::t_7f055f8ad5f42a 66-70,72-77
+  s_418f585ff58cb5::t_bbc46a46e3e777 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "2aefba5497d821c1343ff1097b433aae2ce0ce53",
+  "prompts": {},
+  "sessions": {
+    "s_418f585ff58cb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e5b410ce-aa9a-48d6-be5d-09400395b1b6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
