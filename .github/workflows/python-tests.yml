@@ -1,0 +1,56 @@
+name: python tests
+
+# Runs the pytest suite on every pull request and every push to main.
+#
+# WHY THIS EXISTS: before this workflow, NOTHING in CI ran pytest. The repo had
+# six test files (SDK exports, parity APIs, contract coverage, README quickstart,
+# x402, packaging) and 52 tests, and a pull request could delete or break every
+# one of them and still show all-green — `python-lint` runs ruff only,
+# `foundation-gate` runs a secret scan and a file-size gate, `smoke-install`
+# builds and imports the wheel, and `release` builds a distribution. None of them
+# execute a test. That gap is what let the stdlib-shadow defect reach PyPI as
+# wave-sdk 2.0.0.
+#
+# The matrix mirrors smoke-install.yml (the floor and the two current versions in
+# `requires-python = ">=3.9"`), so a version that can install the wheel is also a
+# version whose behaviour is asserted.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the SDK with every extra it tests
+        # `realtime` and `x402` are optional extras with their own test modules,
+        # so the suite needs them present or those tests silently do less work.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,realtime,x402]"
+
+      - name: pytest
+        run: python -m pytest -q
