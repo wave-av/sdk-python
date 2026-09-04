@@ -120,6 +120,30 @@ except WaveError as e:
 - httpx
 - pydantic
 
+## Migrating from 2.0.0
+
+If you installed `wave-av-sdk` or `wave-sdk` at `2.0.0`, two names changed:
+
+- **Install** `wave-sdk` (not `wave-av-sdk`).
+- **Import** `wave_sdk` (not `wave`).
+
+```diff
+-from wave import Wave
++from wave_sdk import Wave
+```
+
+Nothing below the top-level name changed, so replacing the import line is the
+whole migration. The old `wave` package collided with the Python standard
+library's own `wave` module and was never importable from an installed
+`2.0.0` — full detail, the uninstall step, and a bulk find-and-replace are in
+[MIGRATING.md](MIGRATING.md).
+
+Note that the `wave.<api>` names in the tables above are attributes of a client
+instance, not module paths: name your client whatever you like
+(`client = Wave(...)` in the quick start above), and `client.clips` is the row
+the table writes as `wave.clips`.
+
 ## License
 
-MIT - WAVE Online, LLC
+Apache-2.0 - WAVE Online, LLC. See [LICENSE](LICENSE) and [NOTICE](NOTICE); the
+WAVE marks are not licensed under the Apache grant.
