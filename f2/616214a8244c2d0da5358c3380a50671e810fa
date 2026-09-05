@@ -1,0 +1,51 @@
+.github/workflows/release-drift.yml
+  s_efe86faf2558e9::t_03b4f940bcbacb 1-55
+.gitignore
+  s_efe86faf2558e9::t_b228904432c706 1-10
+.github/workflows/release.yml
+  s_efe86faf2558e9::t_800c96de3ae14e 58-59,167
+  s_efe86faf2558e9::t_28f8f2491f545a 57
+  s_efe86faf2558e9::t_8249a5cfc5fefe 60-62
+  s_efe86faf2558e9::t_69f4785a6fdc82 164-166
+  s_efe86faf2558e9::t_89c62304bf8887 168-170
+  s_4cf3ff356720d2::t_11cc9c7ce9abc1 3-5,7-34,40-44,50-51,54-55,64-84,87,94,97,100-105,115,117,121,133,140-143,145-146,148-150,152-153,155-160,162-163,171-183,185-194
+scripts/release/check_drift.py
+  s_efe86faf2558e9::t_fde7191bdde770 1-207
+  s_efe86faf2558e9::t_f426cdd3e1cbf7 208-209
+scripts/release/pypi_version_exists.py
+  s_57e95d6e97cb7e::t_eec1a2cfe2b976 1-54
+scripts/release/assert_version.py
+  s_efe86faf2558e9::t_5837bbf5156b6f 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f2616214a8244c2d0da5358c3380a50671e810fa",
+  "prompts": {},
+  "sessions": {
+    "s_4cf3ff356720d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad4be75a98e440bfe",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    },
+    "s_57e95d6e97cb7e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ac637a46c4be851",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    },
+    "s_efe86faf2558e9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2b6e2e9-ab55-4d57-9d9f-d57a588ae688",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
