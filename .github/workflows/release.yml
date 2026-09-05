@@ -2,9 +2,18 @@ name: release
 
 # Codified release-on-tag pipeline for wave-sdk (PyPI: wave-sdk, PyPI Trusted
 # Publishing, no stored token -- decision IGV-D-010: no per-repo publish
-# secrets). Three jobs, each with its own minimal `permissions:`:
+# secrets). Four jobs, each with its own minimal `permissions:`:
 #
-#   verify  -- checks out the exact tag, asserts tag == pyproject.toml
+#   resolve-ref -- resolves + strictly validates the tag (push ref or
+#              dispatch input) BEFORE it reaches any git/python/gh command as
+#              text: format (v<semver>), existence (git rev-parse), and trust
+#              (the tag's commit must be an ancestor of origin/main) -- every
+#              later job checks out that commit BY SHA, not by the (mutable)
+#              tag name. A workflow_dispatch `tag` input is
+#              attacker-influencable text; requiring ancestry means every
+#              downstream job only ever builds/publishes/releases code that
+#              was already merged and reviewed on the default branch.
+#   verify  -- checks out the resolved sha, asserts tag == pyproject.toml
 #              version == wave_sdk.__version__ (fails loud on any mismatch),
 #              installs, runs the full pytest suite, builds sdist+wheel,
 #              and `twine check`s them. Nothing downstream runs on a red verify.
@@ -51,41 +60,102 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Resolve + strictly validate the tag before it reaches any command. A
+  # dispatch input is attacker-influencable text; a full-anchored regex (not a
+  # glob) refuses anything that isn't exactly `v<semver>`. Beyond format, this
+  # job also proves the tag's commit EXISTS and is an ANCESTOR of origin/main
+  # before any downstream job checks it out. Outputs both `tag` (the name, for
+  # assert_version.py/gh release) and `sha` (the validated commit, used for
+  # every downstream checkout) -- never interpolated into a shell body, only
+  # passed via env:/outputs.
+  # ---------------------------------------------------------------------------
+  resolve-ref:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      # Full history + all tags -- needed so `git rev-parse`/`git merge-base`
+      # below can see the tag and `origin/main`. No `ref:` override: this
+      # checks out whatever triggered the run (the pushed tag, or the branch a
+      # dispatch was run from) -- never the untrusted dispatch input -- and no
+      # step here executes anything from that tree (metadata reads only).
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and validate the tag to release
+        id: resolve
+        env:
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          PUSH_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="${DISPATCH_TAG:-$PUSH_TAG}"
+
+          # 1. Format -- full-anchored regex, not a glob -- refuses anything
+          #    that isn't exactly `v<semver>`. This value flows into a `ref:`
+          #    on downstream checkout steps (as the resolved sha, never the
+          #    tag text itself), so it is validated BEFORE use.
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::refusing to process ref '$TAG' — expected v<semver>"
+            exit 1
+          fi
+
+          # 2. Existence -- the tag must resolve to a real commit object in
+          #    THIS repo, not just text that happens to look right.
+          if ! SHA="$(git rev-parse --verify --quiet "refs/tags/${TAG}^{commit}")"; then
+            echo "::error::tag '$TAG' does not exist in this repository (or does not point at a commit)"
+            exit 1
+          fi
+
+          # 3. Trust -- a `workflow_dispatch` input is attacker-influencable
+          #    text, and a dispatch run's ambient GITHUB_REF/Actions-cache
+          #    scope is whatever branch it was dispatched on (normally
+          #    `main`), even though the CODE this workflow goes on to execute
+          #    (pytest, build, twine, PyPI publish) is the resolved tag's
+          #    tree. Format-validity alone does not prove that tree was ever
+          #    reviewed -- a tag pushed off an arbitrary/unmerged branch
+          #    passes the regex above just as easily. Requiring the tag's
+          #    commit to be an ANCESTOR of origin/main means every later job
+          #    only ever runs code that was already merged (and reviewed) on
+          #    the default branch -- never a bespoke, unmerged payload
+          #    smuggled in via a crafted tag.
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::tag '$TAG' (commit $SHA) is not reachable from origin/main — refusing to build/publish/release an unmerged or unrecognized ref"
+            exit 1
+          fi
+
+          echo "resolved tag: $TAG -> $SHA (verified: v<semver> shape, exists, ancestor of origin/main)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
   verify:
     name: verify (version match, tests, build)
+    needs: [resolve-ref]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
     outputs:
-      tag: ${{ steps.resolve.outputs.tag }}
-      version: ${{ steps.resolve.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Resolve target tag
-        id: resolve
-        env:
-          TAG_INPUT: ${{ github.event.inputs.tag }}
-          TAG_FROM_PUSH: ${{ github.ref_name }}
-        run: |
-          TAG="$TAG_INPUT"
-          if [ -z "$TAG" ]; then
-            TAG="$TAG_FROM_PUSH"
-          fi
-          # Strict allowlist: vN.N.N[-suffix] only -- this value flows into a
-          # `ref:` on the checkout steps below, so it is validated BEFORE use,
-          # not merely pattern-matched loosely.
-          if ! printf '%s' "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
-            echo "::error::tag '$TAG' does not match the strict vX.Y.Z[-suffix] pattern"
-            exit 1
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-          echo "resolved tag=$TAG version=${TAG#v}"
-
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: refs/tags/${{ steps.resolve.outputs.tag }}
+          ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
+
+      - name: Derive version from the resolved tag
+        id: version
+        env:
+          TAG: ${{ needs.resolve-ref.outputs.tag }}
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -98,7 +168,7 @@ jobs:
           pip install build twine
 
       - name: Assert tag == pyproject.toml version == wave_sdk.__version__
-        run: python3 scripts/release/assert_version.py "${{ steps.resolve.outputs.tag }}"
+        run: python3 scripts/release/assert_version.py "${{ needs.resolve-ref.outputs.tag }}"
 
       - name: pytest (full suite, the checked-out tag)
         run: python -m pytest -q
@@ -112,13 +182,13 @@ jobs:
       - name: Upload dist
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dist-${{ steps.resolve.outputs.tag }}
+          name: dist-${{ needs.resolve-ref.outputs.tag }}
           path: dist/
           retention-days: 14
 
   publish:
     name: publish to PyPI
-    needs: verify
+    needs: [resolve-ref, verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -130,7 +200,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: refs/tags/${{ needs.verify.outputs.tag }}
+          ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -139,7 +209,7 @@ jobs:
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist-${{ needs.verify.outputs.tag }}
+          name: dist-${{ needs.resolve-ref.outputs.tag }}
           path: dist
 
       - name: Check whether PyPI already has this exact version
@@ -161,7 +231,7 @@ jobs:
 
   release:
     name: create GitHub Release
-    needs: [verify, publish]
+    needs: [resolve-ref, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -169,18 +239,18 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: refs/tags/${{ needs.verify.outputs.tag }}
+          ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist-${{ needs.verify.outputs.tag }}
+          name: dist-${{ needs.resolve-ref.outputs.tag }}
           path: dist
 
       - name: Create or update the GitHub Release for this tag (idempotent)
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.verify.outputs.tag }}
+          TAG: ${{ needs.resolve-ref.outputs.tag }}
         run: |
           set -e
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
