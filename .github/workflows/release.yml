@@ -1,46 +1,107 @@
 name: release
 
-# Builds sdist + wheel and publishes to PyPI on `v*` tags using PyPI Trusted
-# Publishing (OIDC) — no long-lived API token stored in this repo. On pull
-# requests the same build runs as a dry-run: build, `twine check`, install
-# the wheel into a throwaway venv, and import `Wave` from it. That dry-run
-# job never touches PyPI (no `id-token` permission, no publish step).
+# Codified release-on-tag pipeline for wave-sdk (PyPI: wave-sdk, PyPI Trusted
+# Publishing, no stored token -- decision IGV-D-010: no per-repo publish
+# secrets). Three jobs, each with its own minimal `permissions:`:
 #
-# One-time setup before the first `v*` tag: register this repo + workflow as
-# a Trusted Publisher on the `wave-sdk` PyPI project (see AGENTS.md / PR body
-# for the exact fields — this workflow cannot self-register).
+#   verify  -- checks out the exact tag, asserts tag == pyproject.toml
+#              version == wave_sdk.__version__ (fails loud on any mismatch),
+#              installs, runs the full pytest suite, builds sdist+wheel,
+#              and `twine check`s them. Nothing downstream runs on a red verify.
+#   publish -- id-token: write only. Publishes via PyPI Trusted Publishing
+#              (pypa/gh-action-pypi-publish, OIDC, NO API token) with PEP 740
+#              attestations enabled. If PyPI already has this exact version
+#              (checked live against pypi.org before publishing), the publish
+#              step is skipped with a clear log line and the job still
+#              succeeds -- a re-run must be idempotent, not a hard failure.
+#   release -- contents: write only. Creates the GitHub Release for the tag
+#              with generated notes and the sdist+wheel attached. Idempotent:
+#              if the release already exists, it edits/uploads onto it
+#              instead of failing.
+#
+# Triggers on `v*` tag pushes AND `workflow_dispatch` with a `tag` input, so
+# an existing tag (e.g. the current v2.1.0, pushed before this workflow
+# existed) can be backfilled on demand:
+#   gh workflow run release.yml --repo wave-av/sdk-python --ref main -f tag=v2.1.0
+#
+# Every `uses:` below is pinned to a 40-character commit SHA with the human
+# version in a trailing comment -- a tag ref (`@v6`) is a mutable pointer an
+# upstream maintainer (or an attacker who compromises their account) can
+# repoint without your review ever seeing a new commit.
+#
+# One-time operator setup (this workflow cannot self-register): add this repo
+# + workflow as a PyPI Trusted Publisher for the `wave-sdk` project. See the
+# PR body for the exact pypi.org settings path.
 
 on:
-  pull_request:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to verify/publish/release, e.g. v2.1.0 (backfill an existing tag)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: build + dry-run check
+  verify:
+    name: verify (version match, tests, build)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
     steps:
+      - name: Resolve target tag
+        id: resolve
+        env:
+          TAG_INPUT: ${{ github.event.inputs.tag }}
+          TAG_FROM_PUSH: ${{ github.ref_name }}
+        run: |
+          TAG="$TAG_INPUT"
+          if [ -z "$TAG" ]; then
+            TAG="$TAG_FROM_PUSH"
+          fi
+          # Strict allowlist: vN.N.N[-suffix] only -- this value flows into a
+          # `ref:` on the checkout steps below, so it is validated BEFORE use,
+          # not merely pattern-matched loosely.
+          if ! printf '%s' "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::tag '$TAG' does not match the strict vX.Y.Z[-suffix] pattern"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "resolved tag=$TAG version=${TAG#v}"
+
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: refs/tags/${{ steps.resolve.outputs.tag }}
           persist-credentials: false
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
 
-      - name: Install build tooling
+      - name: Install the SDK with every extra its tests need
         run: |
           python -m pip install --upgrade pip
+          pip install -e ".[dev,realtime,x402]"
           pip install build twine
+
+      - name: Assert tag == pyproject.toml version == wave_sdk.__version__
+        run: python3 scripts/release/assert_version.py "${{ steps.resolve.outputs.tag }}"
+
+      - name: pytest (full suite, the checked-out tag)
+        run: python -m pytest -q
 
       - name: Build sdist + wheel
         run: python -m build
@@ -48,89 +109,86 @@ jobs:
       - name: twine check
         run: twine check dist/*
 
-      - name: Create fresh venv (no repo on sys.path)
-        run: python -m venv "$RUNNER_TEMP/dry-run"
-
-      - name: Install the built wheel
-        run: |
-          WHEEL=$(ls dist/*.whl)
-          "$RUNNER_TEMP/dry-run/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/dry-run/bin/pip" install "$WHEEL"
-
-      - name: Import check (installed wheel, run away from the repo)
-        working-directory: ${{ runner.temp }}/dry-run
-        run: |
-          bin/python -c "
-          from wave_sdk import Wave
-          import wave_sdk
-          print('wave_sdk', wave_sdk.__version__, 'imported OK from', wave_sdk.__file__)
-          print('Wave facade:', Wave)
-          "
-
       - name: Upload dist
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dist
+          name: dist-${{ steps.resolve.outputs.tag }}
           path: dist/
-          retention-days: 7
+          retention-days: 14
 
   publish:
     name: publish to PyPI
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: pypi
       url: https://pypi.org/project/wave-sdk/
     permissions:
-      # OIDC token for PyPI Trusted Publishing — no API token secret needed.
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: refs/tags/${{ needs.verify.outputs.tag }}
           persist-credentials: false
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
 
-      - name: Install build tooling
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-${{ needs.verify.outputs.tag }}
+          path: dist
+
+      - name: Check whether PyPI already has this exact version
+        id: pypi_check
         run: |
-          python -m pip install --upgrade pip
-          pip install build
+          set -e
+          RESULT=$(python3 scripts/release/pypi_version_exists.py "${{ needs.verify.outputs.version }}")
+          echo "exists=$RESULT" >> "$GITHUB_OUTPUT"
 
-      - name: Build sdist + wheel
-        run: python -m build
-
-      - name: Verify tag matches package version
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "tag v$TAG_VERSION does not match pyproject.toml version $PKG_VERSION"
-            exit 1
-          fi
-
-      - name: Publish to PyPI (Trusted Publishing, OIDC)
+      - name: Publish to PyPI (Trusted Publishing, OIDC, PEP 740 attestations)
+        if: steps.pypi_check.outputs.exists == 'false'
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          attestations: true
 
-      - name: Post-publish verification (PyPI + fresh install)
+      - name: Skip publish (already on PyPI)
+        if: steps.pypi_check.outputs.exists == 'true'
+        run: echo "::notice::wave-sdk ${{ needs.verify.outputs.version }} is already on PyPI -- skipping publish, proceeding to release job"
+
+  release:
+    name: create GitHub Release
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: refs/tags/${{ needs.verify.outputs.tag }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-${{ needs.verify.outputs.tag }}
+          path: dist
+
+      - name: Create or update the GitHub Release for this tag (idempotent)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          for i in 1 2 3 4 5 6 7 8; do
-            AVAILABLE=$(pip index versions wave-sdk 2>/dev/null | grep -o "$TAG_VERSION" || true)
-            if [ -n "$AVAILABLE" ]; then break; fi
-            echo "waiting for PyPI to index wave-sdk==$TAG_VERSION (attempt $i)"
-            sleep 15
-          done
-          python -m venv "$RUNNER_TEMP/verify"
-          "$RUNNER_TEMP/verify/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/verify/bin/pip" install "wave-sdk==$TAG_VERSION"
-          "$RUNNER_TEMP/verify/bin/python" -c "
-          from wave_sdk import Wave
-          import wave_sdk
-          assert wave_sdk.__version__ == '$TAG_VERSION', wave_sdk.__version__
-          print('verified wave-sdk', wave_sdk.__version__, 'installed from PyPI, Wave facade OK')
-          "
+          set -e
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "::notice::release $TAG already exists -- uploading dist assets (clobber) instead of creating"
+            gh release upload "$TAG" dist/* --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --repo "${{ github.repository }}" \
+              --title "wave-sdk $TAG" \
+              --generate-notes
+          fi
