@@ -12,6 +12,10 @@ name: ga evidence
 # `pull_request` legitimately sees VER-001 as `unknown` on a release PR whose tag/version is
 # ahead of what PyPI has published — the producer reports that as `unknown`, not `fail`; see the
 # HEAD-ahead-of-published branch in scripts/ga/check_ver_001.py.
+#
+# PR CONTRACT: on `pull_request`, exit 1 (a live criterion failed) is a `::warning`, not a job
+# failure — that is a property of the live registry, not of the PR's diff. Exit 2 (the producer
+# could not run) always fails the job, and on schedule/workflow_dispatch/push exit 1 fails it too.
 
 on:
   pull_request:
@@ -81,19 +85,26 @@ jobs:
 
       - name: Enforce
         # A gate that cannot fail is not a gate (wave-av/sdks#79 is the org's own cautionary
-        # tale — see registry-cleanroom.yml). This step fails loud on every trigger, including
-        # pull_request; whether that failure is a *required* branch-protection check is a
-        # separate branch-ruleset decision, not something this workflow should paper over by
-        # exiting 0 on a red producer run.
+        # tale — see registry-cleanroom.yml). This step fails loud on every trigger except one:
+        # see the PR CONTRACT note in the header — a live-criterion failure (exit 1) on
+        # `pull_request` logs a `::warning` and exits 0 instead of failing the job, because that
+        # failure is a property of the live registry, not of this PR's diff. Whether the job is a
+        # *required* branch-protection check is a separate branch-ruleset decision.
         env:
           CODE: ${{ steps.evidence.outputs.exit_code }}
+          EVENT: ${{ github.event_name }}
         run: |
+          if [ "$CODE" = "0" ]; then
+            echo "ga-evidence: no criterion failed (pass or unknown only) — see the job summary for detail"
+            exit 0
+          fi
+          if [ "$CODE" = "1" ] && [ "$EVENT" = "pull_request" ]; then
+            echo "::warning title=ga-evidence::sdk-python GA evidence producer reports a failing live criterion (exit 1); evidence is in the job summary and artifact; this does not fail the PR because the criterion is a property of the live surface, not of this change"
+            exit 0
+          fi
           if [ "$CODE" = "1" ]; then
             echo "::error title=ga-evidence::a GA criterion failed verification (exit 1) — see the job summary"
             exit 1
           fi
-          if [ "$CODE" != "0" ]; then
-            echo "::error title=ga-evidence::the producer could not run (exit $CODE) — never read as a pass"
-            exit 1
-          fi
-          echo "ga-evidence: no criterion failed (pass or unknown only) — see the job summary for detail"
+          echo "::error title=ga-evidence::the producer could not run (exit $CODE) — never read as a pass"
+          exit 1
