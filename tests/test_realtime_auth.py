@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import sys
 import types
-from wave.client import WaveClient
-from wave.realtime import RealtimeAPI
+from wave_sdk.client import WaveClient
+from wave_sdk.realtime import RealtimeAPI
 
 import pytest
 
@@ -63,7 +63,7 @@ def test_ws_upgrade_carries_the_organization(captured_ws):
 
 
 def test_rest_path_encodes_the_channel():
-    from wave.realtime import _channel_path
+    from wave_sdk.realtime import _channel_path
 
     assert _channel_path("stream:abc") == "stream:abc"
     assert _channel_path("a/../b") == "a%2F..%2Fb"

@@ -1,0 +1,383 @@
+{
+  "source": "https://api.wave.online/openapi.json",
+  "fetched": "2026-09-01",
+  "info_version": "1.0.0",
+  "total_ops": 75,
+  "operations": [
+    {
+      "operationId": "agentAuthDevice",
+      "method": "POST",
+      "path": "/agent/auth/device"
+    },
+    {
+      "operationId": "agentAuthToken",
+      "method": "POST",
+      "path": "/agent/auth/token"
+    },
+    {
+      "operationId": "avDemux",
+      "method": "POST",
+      "path": "/av/demux"
+    },
+    {
+      "operationId": "avRemux",
+      "method": "POST",
+      "path": "/av/remux"
+    },
+    {
+      "operationId": "batchOperations",
+      "method": "POST",
+      "path": "/batch"
+    },
+    {
+      "operationId": "publishBraidAudio",
+      "method": "POST",
+      "path": "/braid/publish"
+    },
+    {
+      "operationId": "stopBraidAudio",
+      "method": "DELETE",
+      "path": "/braid/publish/{ns}"
+    },
+    {
+      "operationId": "listCaptions",
+      "method": "GET",
+      "path": "/captions"
+    },
+    {
+      "operationId": "createCaptionJob",
+      "method": "POST",
+      "path": "/captions"
+    },
+    {
+      "operationId": "deleteCaptionJob",
+      "method": "DELETE",
+      "path": "/captions/{jobId}"
+    },
+    {
+      "operationId": "getCaptionJob",
+      "method": "GET",
+      "path": "/captions/{jobId}"
+    },
+    {
+      "operationId": "downloadCaptions",
+      "method": "GET",
+      "path": "/captions/{jobId}/download"
+    },
+    {
+      "operationId": "listClips",
+      "method": "GET",
+      "path": "/clips"
+    },
+    {
+      "operationId": "createClip",
+      "method": "POST",
+      "path": "/clips"
+    },
+    {
+      "operationId": "detectClips",
+      "method": "POST",
+      "path": "/clips/detect"
+    },
+    {
+      "operationId": "deleteClip",
+      "method": "DELETE",
+      "path": "/clips/{clipId}"
+    },
+    {
+      "operationId": "getClip",
+      "method": "GET",
+      "path": "/clips/{clipId}"
+    },
+    {
+      "operationId": "updateClip",
+      "method": "PATCH",
+      "path": "/clips/{clipId}"
+    },
+    {
+      "operationId": "listCollabRooms",
+      "method": "GET",
+      "path": "/collab/rooms"
+    },
+    {
+      "operationId": "createCollabRoom",
+      "method": "POST",
+      "path": "/collab/rooms"
+    },
+    {
+      "operationId": "deleteCollabRoom",
+      "method": "DELETE",
+      "path": "/collab/rooms/{roomId}"
+    },
+    {
+      "operationId": "getCollabRoom",
+      "method": "GET",
+      "path": "/collab/rooms/{roomId}"
+    },
+    {
+      "operationId": "custodyOperation",
+      "method": "POST",
+      "path": "/custody/{op}"
+    },
+    {
+      "operationId": "listProjects",
+      "method": "GET",
+      "path": "/editor/projects"
+    },
+    {
+      "operationId": "createProject",
+      "method": "POST",
+      "path": "/editor/projects"
+    },
+    {
+      "operationId": "deleteProject",
+      "method": "DELETE",
+      "path": "/editor/projects/{projectId}"
+    },
+    {
+      "operationId": "getProject",
+      "method": "GET",
+      "path": "/editor/projects/{projectId}"
+    },
+    {
+      "operationId": "updateProject",
+      "method": "PATCH",
+      "path": "/editor/projects/{projectId}"
+    },
+    {
+      "operationId": "exportProject",
+      "method": "POST",
+      "path": "/editor/projects/{projectId}/export"
+    },
+    {
+      "operationId": "engineCapabilities",
+      "method": "GET",
+      "path": "/engine/capabilities"
+    },
+    {
+      "operationId": "gpuStatus",
+      "method": "GET",
+      "path": "/gpu/infer"
+    },
+    {
+      "operationId": "gpuInfer",
+      "method": "POST",
+      "path": "/gpu/infer"
+    },
+    {
+      "operationId": "identityResolve",
+      "method": "GET",
+      "path": "/identity/resolve"
+    },
+    {
+      "operationId": null,
+      "method": "GET",
+      "path": "/leaderboard"
+    },
+    {
+      "operationId": "mintMoqPublishToken",
+      "method": "POST",
+      "path": "/moq/publish/{ns}/{track}"
+    },
+    {
+      "operationId": "mintMoqSubscribeToken",
+      "method": "GET",
+      "path": "/moq/subscribe/{ns}/{track}"
+    },
+    {
+      "operationId": "listCalls",
+      "method": "GET",
+      "path": "/phone/calls"
+    },
+    {
+      "operationId": "makeCall",
+      "method": "POST",
+      "path": "/phone/calls"
+    },
+    {
+      "operationId": "listPhoneLines",
+      "method": "GET",
+      "path": "/phone/lines"
+    },
+    {
+      "operationId": "provisionPhoneLine",
+      "method": "POST",
+      "path": "/phone/lines"
+    },
+    {
+      "operationId": null,
+      "method": "GET",
+      "path": "/platform"
+    },
+    {
+      "operationId": "listPodcastShows",
+      "method": "GET",
+      "path": "/podcast/shows"
+    },
+    {
+      "operationId": "createPodcastShow",
+      "method": "POST",
+      "path": "/podcast/shows"
+    },
+    {
+      "operationId": "listPodcastEpisodes",
+      "method": "GET",
+      "path": "/podcast/shows/{showId}/episodes"
+    },
+    {
+      "operationId": "createPodcastEpisode",
+      "method": "POST",
+      "path": "/podcast/shows/{showId}/episodes"
+    },
+    {
+      "operationId": "pricingManifestsList",
+      "method": "GET",
+      "path": "/pricing/manifests"
+    },
+    {
+      "operationId": "pricingManifestsCreate",
+      "method": "POST",
+      "path": "/pricing/manifests"
+    },
+    {
+      "operationId": "realtimeHistory",
+      "method": "GET",
+      "path": "/realtime/channels/{channel}/history"
+    },
+    {
+      "operationId": "realtimePresence",
+      "method": "GET",
+      "path": "/realtime/channels/{channel}/presence"
+    },
+    {
+      "operationId": "realtimePublish",
+      "method": "POST",
+      "path": "/realtime/channels/{channel}/publish"
+    },
+    {
+      "operationId": "realtimeConnect",
+      "method": "GET",
+      "path": "/realtime/connect"
+    },
+    {
+      "operationId": "renderVideo",
+      "method": "POST",
+      "path": "/render"
+    },
+    {
+      "operationId": "renderPoll",
+      "method": "GET",
+      "path": "/render/{jobId}"
+    },
+    {
+      "operationId": "renderEvents",
+      "method": "GET",
+      "path": "/render/{jobId}/events"
+    },
+    {
+      "operationId": "search",
+      "method": "POST",
+      "path": "/search"
+    },
+    {
+      "operationId": "searchAnalytics",
+      "method": "GET",
+      "path": "/search/analytics"
+    },
+    {
+      "operationId": "searchIndex",
+      "method": "POST",
+      "path": "/search/index"
+    },
+    {
+      "operationId": "searchDelete",
+      "method": "DELETE",
+      "path": "/search/index/{id}"
+    },
+    {
+      "operationId": "listSentimentAnalyses",
+      "method": "GET",
+      "path": "/sentiment"
+    },
+    {
+      "operationId": "createSentimentAnalysis",
+      "method": "POST",
+      "path": "/sentiment"
+    },
+    {
+      "operationId": "analyzeText",
+      "method": "POST",
+      "path": "/sentiment/analyze"
+    },
+    {
+      "operationId": "listEnhancements",
+      "method": "GET",
+      "path": "/studio-ai/enhancements"
+    },
+    {
+      "operationId": "createEnhancement",
+      "method": "POST",
+      "path": "/studio-ai/enhancements"
+    },
+    {
+      "operationId": "previewEnhancement",
+      "method": "POST",
+      "path": "/studio-ai/preview"
+    },
+    {
+      "operationId": "listTranscriptions",
+      "method": "GET",
+      "path": "/transcribe"
+    },
+    {
+      "operationId": "createTranscription",
+      "method": "POST",
+      "path": "/transcribe"
+    },
+    {
+      "operationId": "deleteTranscription",
+      "method": "DELETE",
+      "path": "/transcribe/{transcriptionId}"
+    },
+    {
+      "operationId": "getTranscription",
+      "method": "GET",
+      "path": "/transcribe/{transcriptionId}"
+    },
+    {
+      "operationId": null,
+      "method": "GET",
+      "path": "/usage"
+    },
+    {
+      "operationId": "listChapters",
+      "method": "GET",
+      "path": "/videos/{videoId}/chapters"
+    },
+    {
+      "operationId": "createChapter",
+      "method": "POST",
+      "path": "/videos/{videoId}/chapters"
+    },
+    {
+      "operationId": "detectChapters",
+      "method": "POST",
+      "path": "/videos/{videoId}/chapters/detect"
+    },
+    {
+      "operationId": "cloneVoice",
+      "method": "POST",
+      "path": "/voice/clone"
+    },
+    {
+      "operationId": "generateSpeech",
+      "method": "POST",
+      "path": "/voice/generate"
+    },
+    {
+      "operationId": "listVoices",
+      "method": "GET",
+      "path": "/voice/voices"
+    }
+  ]
+}
