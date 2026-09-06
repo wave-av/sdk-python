@@ -6,6 +6,59 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-06
+
+### Added
+
+PR4-SDK: `wave.compose` (`ComposeAPI`), the Python SDK's rendering of the
+WAVE Composer: `POST /v1/compose`, the shared cross-rendering (API, CLI, SDK,
+MCP) contract. Types mirror the API's own `ComposeProposal` wire type field
+for field via pydantic aliases, so the wire JSON stays camelCase while
+Python attributes stay snake_case.
+
+- `compose(intent, *, budget_usd=None, flow_id=None, referer=None)` -
+  `POST /v1/compose` (`composer:write`). Returns a typed `ComposeProposal`:
+  `stages[]`, `product_ids[]`, `tools[]`, `scopes[]`, `price_rows[]`,
+  `call_shape`, `next_[]`, `executes` (always `False` - a proposal never
+  executes anything), `grounding`, `grounded_at`, `manifest_hash`, `engine`,
+  `flow_id`.
+- `get_proposal(proposal_id)` - `GET /v1/compose/proposals/:id`
+  (`composer:read`), re-reading a stored proposal instead of re-composing.
+- `save_flow(proposal)` - builds the `POST /api/console/flows` body with
+  `createdBy.kind: "wave-composer"` and the proposal's `manifest_hash` /
+  `grounded_at`. There is no machine-auth token for `wave-composer` callers
+  yet (the console's flow-save route is session-cookie only until a
+  composer:write console token ships; OWED). This method never calls the
+  console route and never invents a credential to do so - it prints, and
+  returns, the exact `curl` a human in a signed-in console session can
+  paste. Never a silent no-op.
+- `wave.compose` never calls a product route: the only network calls it
+  makes are `POST /v1/compose` and `GET /v1/compose/proposals/:id`.
+
+### Testing
+
+- `tests/test_compose.py` - a fixture round-trip test (`model_validate` ->
+  `model_dump(by_alias=True)` reproduces the fixture byte-identically),
+  a transport-mock test asserting `compose()` issues exactly one
+  `POST /v1/compose` and no other request, and a test that `save_flow()`
+  makes zero HTTP calls and returns a curl string naming
+  `/api/console/flows` and `createdBy":{"kind":"wave-composer"` with no
+  bearer token embedded.
+- `tests/fixtures/compose_proposal.json` - a hand-built `ComposeProposal`
+  fixture (a webinar-captions composition, matching the shape and sample
+  values of the shared cross-rendering conformance scenario). No upstream
+  engine source was copied into this repo: that reference is TS test-engine
+  plumbing (a fake model door, a fake quote stub, a live-index builder) with
+  no literal request/response JSON to copy verbatim, so this fixture is a
+  hand-built equivalent in the same scenario rather than a byte-copy.
+- Updated `tests/test_sdk_exports.py` for the new API count (43 + client)
+  and version (2.2.0).
+
+### Changed
+
+- Bumped to 2.2.0 (additive, semver-minor): no existing method signature
+  changed.
+
 ## [2.1.0] - 2026-09-01 (not yet published to PyPI)
 
 ### Fixed
