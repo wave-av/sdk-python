@@ -134,3 +134,62 @@ jobs:
           assert wave_sdk.__version__ == '$TAG_VERSION', wave_sdk.__version__
           print('verified wave-sdk', wave_sdk.__version__, 'installed from PyPI, Wave facade OK')
           "
+
+  # ---------------------------------------------------------------------------------------
+  # VER-001. Create the GitHub Release for the tag once the artifact is confirmed live on
+  # PyPI — this job needs `publish` (which itself only runs `if: startsWith(github.ref,
+  # 'refs/tags/v')`, i.e. never on a PR dry-run) to have SUCCEEDED, which for `publish`
+  # includes its own "Post-publish verification" step above, so a Release is never created
+  # for a wheel that reached `twine upload`/Trusted Publishing but was never actually
+  # confirmed live. Idempotent: a Release that already exists for this tag gets its
+  # dist/ artifacts re-uploaded with --clobber instead of failing on "already exists".
+  # ---------------------------------------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # create/upload the Release for this tag — nothing else
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: dist
+          path: dist
+
+      # TAG_NAME comes from the environment (never interpolated into the script body),
+      # matching the "Verify tag matches package version" step above.
+      - name: Create or update the GitHub Release (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ASSETS_TO_UPLOAD=(dist/*)
+          if [ "${#ASSETS_TO_UPLOAD[@]}" -eq 0 ]; then
+            echo "::error::no files under dist/ to attach to the release"
+            exit 1
+          fi
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "release $TAG_NAME already exists — uploading dist/ (idempotent path, --clobber)"
+            gh release upload "$TAG_NAME" "${ASSETS_TO_UPLOAD[@]}" --clobber
+          else
+            echo "release $TAG_NAME does not exist — creating with generated notes"
+            gh release create "$TAG_NAME" "${ASSETS_TO_UPLOAD[@]}" --title "$TAG_NAME" --generate-notes
+          fi
+          echo "verifying the release exists and carries every dist/ asset"
+          ASSETS="$(gh release view "$TAG_NAME" --json assets --jq '[.assets[].name] | join(" ")')"
+          echo "release assets: $ASSETS"
+          for f in "${ASSETS_TO_UPLOAD[@]}"; do
+            case "$ASSETS" in
+              *"$(basename "$f")"*) ;;
+              *)
+                echo "::error::$(basename "$f") missing from release $TAG_NAME after upload"
+                exit 1
+                ;;
+            esac
+          done
+          echo "VER-001: GitHub Release for $TAG_NAME exists and carries the built dist/ artifacts."
