@@ -85,7 +85,7 @@ jobs:
       # checks out whatever triggered the run (the pushed tag, or the branch a
       # dispatch was run from) -- never the untrusted dispatch input -- and no
       # step here executes anything from that tree (metadata reads only).
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -146,7 +146,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
@@ -161,7 +161,7 @@ jobs:
       # pinned to the tag's resolved (and ancestry-verified) sha above --
       # only the tooling that INSPECTS that tree floats to main.
       - name: Check out release tooling from the workflow's own ref
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ github.sha }}
           sparse-checkout: scripts/release
@@ -216,7 +216,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
@@ -226,7 +226,7 @@ jobs:
       # published, so a backfilled tag from before scripts/release/* existed
       # still finds the helper it needs.
       - name: Check out release tooling from the workflow's own ref
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ github.sha }}
           sparse-checkout: scripts/release
@@ -268,7 +268,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
