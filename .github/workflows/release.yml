@@ -151,6 +151,24 @@ jobs:
           ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
 
+      # Release TOOLING is pinned to the WORKFLOW's own ref (github.sha --
+      # always a commit on main this run executes from), never to the tag
+      # being verified. A tag can predate any scripts/release/* helper this
+      # workflow relies on (that is exactly how the v2.1.0 backfill failed --
+      # scripts/release/assert_version.py did not exist yet at that tag), so
+      # the helpers are checked out into their own path, separate from the
+      # tag's tree, and invoked from there. The package/code under test stays
+      # pinned to the tag's resolved (and ancestry-verified) sha above --
+      # only the tooling that INSPECTS that tree floats to main.
+      - name: Check out release tooling from the workflow's own ref
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: scripts/release
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+          path: .release-tooling
+
       - name: Derive version from the resolved tag
         id: version
         env:
@@ -168,7 +186,7 @@ jobs:
           pip install build twine
 
       - name: Assert tag == pyproject.toml version == wave_sdk.__version__
-        run: python3 scripts/release/assert_version.py "${{ needs.resolve-ref.outputs.tag }}"
+        run: python3 .release-tooling/scripts/release/assert_version.py "${{ needs.resolve-ref.outputs.tag }}"
 
       - name: pytest (full suite, the checked-out tag)
         run: python -m pytest -q
@@ -203,6 +221,19 @@ jobs:
           ref: ${{ needs.resolve-ref.outputs.sha }}
           persist-credentials: false
 
+      # See the matching step in the `verify` job above: release tooling is
+      # pinned to the workflow's own ref (github.sha), never to the tag being
+      # published, so a backfilled tag from before scripts/release/* existed
+      # still finds the helper it needs.
+      - name: Check out release tooling from the workflow's own ref
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: scripts/release
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+          path: .release-tooling
+
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
@@ -216,7 +247,7 @@ jobs:
         id: pypi_check
         run: |
           set -e
-          RESULT=$(python3 scripts/release/pypi_version_exists.py "${{ needs.verify.outputs.version }}")
+          RESULT=$(python3 .release-tooling/scripts/release/pypi_version_exists.py "${{ needs.verify.outputs.version }}")
           echo "exists=$RESULT" >> "$GITHUB_OUTPUT"
 
       - name: Publish to PyPI (Trusted Publishing, OIDC, PEP 740 attestations)
