@@ -12,10 +12,10 @@ from __future__ import annotations
 import sys
 import types
 
+import pytest
+
 from wave_sdk.client import WaveClient
 from wave_sdk.realtime import RealtimeAPI
-
-import pytest
 
 
 class _FakeSocket:
