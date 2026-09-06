@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# Fixture tests for body-policy.sh.
+#
+# Deliberately fixture-only: the gate is NEVER proved by writing a real leak into a
+# live public PR body, because doing so would publish the exact thing it guards.
+#
+# The negatives here are the load-bearing half. A leak gate that blocks everything
+# is trivially "correct" and useless — it gets disabled within a week. The bare
+# cross-reference case below is the one that keeps this gate deployable.
+set -uo pipefail
+
+SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/body-policy.sh"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+# The names the real gate is configured with come from an org variable; the tests
+# pin their own so they are hermetic and do not depend on CI configuration. The
+# names are deliberately SYNTHETIC: this file is public and exempt from both tree
+# scanners, so a real private repo name written here would itself be a leak.
+export GUARD_PRIVATE_REPOS="example-private-alpha, example-private-bravo, example-private-charlie"
+
+PASS=0; FAIL=0
+
+# expect <exit-code> <name> <body-text>
+expect() {
+  local want="$1" name="$2" body="$3" out rc
+  printf '%s\n' "$body" > "$TMP/body.txt"
+  out="$(bash "$SCRIPT" "$TMP/body.txt" 2>&1)"; rc=$?
+  if [[ "$rc" == "$want" ]]; then
+    PASS=$((PASS+1)); printf '  ok   %s\n' "$name"
+  else
+    FAIL=$((FAIL+1)); printf '  FAIL %s — want exit %s, got %s\n%s\n' "$name" "$want" "$rc" "$out"
+  fi
+  # The annotation is world-readable; a hit must never echo the matched text.
+  if [[ "$rc" == 1 ]] && printf '%s' "$out" | grep -qF "$body"; then
+    FAIL=$((FAIL+1)); printf '  FAIL %s — LEAKED the matched text into the annotation\n' "$name"
+  fi
+}
+
+echo "body-policy fixtures"
+
+# --- must BLOCK ---------------------------------------------------------------
+expect 1 'private repo + credential name' \
+  'Flip is live: WAVE_VIEWPORT_LEASE_SECRET is bound on example-private-alpha now.'
+expect 1 'private repo + credential name, reverse order' \
+  'The MOQ_JOIN_SECRET was added; example-private-bravo picks it up on deploy.'
+# Regression: a MULTI-segment credential name after the repo name. The rule can
+# only match the trailing LEASE_SECRET, which sits mid-word (after an
+# underscore) — a \b in front of OPS_DETAIL silently dropped this whole order.
+expect 1 'private repo, then compound credential name' \
+  'example-private-alpha now uses WAVE_VIEWPORT_LEASE_SECRET for renewals.'
+expect 1 'private repo + secret count' \
+  'example-private-alpha went from 74 secrets to 75 after this change.'
+expect 1 'private repo + service binding' \
+  'This adds a service binding from the worker to example-private-charlie for settlement.'
+expect 1 'operator home path' \
+  'Repro: run it from /Users/someoperator/Documents/notes and it fails.'  # enforce-ignore (fixture)
+expect 1 'internal-only marker' \
+  'Attaching the internal-only rollout plan for context.'
+# Assembled at run time rather than written as a literal: a fixture that LOOKS like
+# a live AWS key trips this repo's own pre-commit secret scanners (it did, on the
+# first draft). Splitting the prefix keeps the fixture exercising the real regex
+# without parking a credential-shaped string in source.
+AKID_FIXTURE="AKI""A1234567890ABCDEF"
+expect 1 'AWS access key id' \
+  "The failing job had ${AKID_FIXTURE} configured."
+expect 1 'internal tailscale IP' \
+  'It resolves to 100.71.4.19 from inside the fleet.'
+# Regression: ABOUT_THE_CONTROL is scoped to the heuristic prose rules. A real
+# credential must block even when the same line talks about the gate — otherwise
+# "mention the policy" is a one-line bypass of every format rule.
+expect 1 'credential on a line that mentions the policy' \
+  "Discussing public-repo-guard: the key ${AKID_FIXTURE} was rotated."
+expect 1 'private key on a line citing SECURITY.md' \
+  "Per SECURITY.md: -----BEGIN RSA ""PRIVATE KEY-----"  # pragma: allowlist secret (fixture, split like AKID above)
+
+# --- must PASS (precision — these keep the gate deployable) -------------------
+expect 0 'bare private-repo cross-reference' \
+  'This is the companion change to example-private-bravo#260; merge that one first.'
+expect 0 'two private repos, no operational detail' \
+  'Both example-private-alpha and example-private-bravo will need a follow-up for this.'
+expect 0 'credential NAME with no private repo nearby' \
+  'The handler now reads SOME_API_TOKEN from the environment instead of a literal.'
+# Regression: the SCREAMING_CASE credential-name branch is case-SENSITIVE. A
+# global (?i) once leaked onto it and lowercase code talk near a repo name
+# (`session_token`) blocked ordinary prose — exactly the false-positive class
+# that gets a gate switched off.
+expect 0 'lowercase code identifier near a private repo' \
+  'The example-private-alpha worker reads session_token from the request header.'
+expect 1 'repo name cased differently still pairs with a credential NAME' \
+  'Example-Private-Alpha now requires LEASE_SECRET at deploy time.'
+expect 0 'talking about the gate with a repo name and credential NAME' \
+  'body-policy blocks example-private-alpha next to a SECRET_TOKEN; that is intended.'
+expect 0 'public runner path is not an operator path' \
+  'CI checks out to /home/runner/work/repo/repo before the scan runs.'  # enforce-ignore (fixture)
+expect 0 'talking about the control' \
+  'body-policy blocks a private repo named next to a SECRET_TOKEN; that is intended.'
+expect 0 'explicit guard:allow with a reason' \
+  'Example for the docs: example-private-alpha holds EXAMPLE_SECRET — guard:allow documented-example'
+expect 0 'ordinary clean body' \
+  'Bumps the draft revision and regenerates the fixtures. No behaviour change.'
+# Regression: the first CI run of this job failed on its own PR, because a review
+# bot edited the body to summarize the change and quoted the marker verbatim.
+expect 0 'marker MENTIONED in straight quotes is a description' \
+  'Blocks infra identifiers and markers (account_id, home paths, "internal-only" text).'
+expect 0 'marker MENTIONED in a code span' \
+  'The rule matches `internal-only` and `for internal use` in body text.'
+expect 0 'marker MENTIONED in smart quotes' \
+  'Blocks operator home paths and “internal-only” text.'
+expect 1 'marker USED unquoted still blocks' \
+  'Attaching the internal-only rollout plan; do not share outside the team.'
+
+# --- fail closed --------------------------------------------------------------
+# Invoked directly, not through expect(): expect() always materializes a file, so
+# it cannot reach these paths. A gate that returns "OK" when it was handed nothing
+# to scan is the failure mode this whole file exists to prevent.
+for case in "no argument at all::" "nonexistent path::$TMP/does-not-exist.txt"; do
+  name="${case%%::*}"; arg="${case##*::}"
+  if [[ -n "$arg" ]]; then bash "$SCRIPT" "$arg" >/dev/null 2>&1; else bash "$SCRIPT" >/dev/null 2>&1; fi
+  rc=$?
+  if [[ "$rc" == 2 ]]; then
+    PASS=$((PASS+1)); printf '  ok   %s → exit 2 (fails closed)\n' "$name"
+  else
+    FAIL=$((FAIL+1)); printf '  FAIL %s — want exit 2, got %s\n' "$name" "$rc"
+  fi
+done
+
+# An empty GUARD_PRIVATE_REPOS is a documented local convenience but FAILS CLOSED
+# in CI (GITHUB_ACTIONS set): a missing or renamed org variable must go red, never
+# silently skip the private-repo rule and report a pass over an unscanned class.
+printf '%s\n' 'Ordinary clean body with nothing to find.' > "$TMP/body.txt"
+env -u GUARD_PRIVATE_REPOS GITHUB_ACTIONS=true bash "$SCRIPT" "$TMP/body.txt" >/dev/null 2>&1
+rc=$?
+if [[ "$rc" == 2 ]]; then
+  PASS=$((PASS+1)); printf '  ok   %s → exit 2 (fails closed)\n' 'GUARD_PRIVATE_REPOS unset in CI'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL %s: want exit 2, got %s\n' 'GUARD_PRIVATE_REPOS unset in CI' "$rc"
+fi
+env -u GUARD_PRIVATE_REPOS -u GITHUB_ACTIONS bash "$SCRIPT" "$TMP/body.txt" >/dev/null 2>&1
+rc=$?
+if [[ "$rc" == 0 ]]; then
+  PASS=$((PASS+1)); printf '  ok   %s → exit 0 (rule skipped)\n' 'GUARD_PRIVATE_REPOS unset locally'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL %s: want exit 0, got %s\n' 'GUARD_PRIVATE_REPOS unset locally' "$rc"
+fi
+
+echo "  ---"
+if (( FAIL > 0 )); then
+  echo "  $PASS passed, $FAIL FAILED"; exit 1
+fi
+echo "  $PASS passed, 0 failed"
