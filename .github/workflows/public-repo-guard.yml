@@ -207,6 +207,19 @@ jobs:
           sparse-checkout: scripts/public-repo-guard
           sparse-checkout-cone-mode: false
 
+      # Bootstrap exception, safe by construction: this only fires when the TRUSTED
+      # ref genuinely lacks the script (true only for the one PR that first adds
+      # this gate -- an attacker cannot make a real base ref lose a file that is
+      # already merged to it). Once this PR merges, every later PR's base carries
+      # the script and this step is a no-op forever after.
+      - name: Bootstrap fallback for the PR that first introduces this gate
+        if: ${{ !hashFiles('scripts/public-repo-guard/body-policy.sh') }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/public-repo-guard
+          sparse-checkout-cone-mode: false
+
       # Same PCRE2 requirement as the tree job above — apt's ripgrep won't do.
       - name: Install ripgrep (PCRE2-capable, pinned + checksum-verified)
         env:
