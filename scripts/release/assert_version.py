@@ -31,7 +31,14 @@ import argparse
 import sys
 from pathlib import Path
 
-import tomllib
+try:  # tomllib is stdlib from 3.11; `tomli` is a dev dependency below that
+    # (this repo's pyproject.toml pins `tomli>=2.0.0; python_version < '3.11'`,
+    # matching the same fallback already used in tests/test_packaging.py and
+    # scripts/release/check_drift.py -- requires-python here is >=3.9, and the
+    # `pytest (py3.9)` CI matrix leg runs this script as a subprocess).
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised on 3.9/3.10 only
+    import tomli as tomllib
 
 
 def main(argv: list[str]) -> int:
