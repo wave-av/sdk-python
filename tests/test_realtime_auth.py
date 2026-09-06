@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import types
+
 from wave_sdk.client import WaveClient
 from wave_sdk.realtime import RealtimeAPI
 
