@@ -1,0 +1,55 @@
+name: release-drift
+
+# Standing drift gate: fails loud the moment the tag, pyproject.toml version,
+# PyPI's latest published version, GitHub Release existence, or PyPI
+# attestation coverage disagree with each other. This is the mechanism behind
+# Jake's 2026-09-05 decision -- "always codified workflows so we don't ever
+# have drifts" -- it is the check that would have caught VER-001 (no GitHub
+# Release for the current tag, PyPI a version behind) and SUPPLY-001 (no
+# provenance/attestation on the published package) on day one instead of
+# waiting for an external GA validator to find them.
+#
+# All comparison logic lives in scripts/release/check_drift.py so it is
+# testable locally with zero CI round-trip:
+#   python3 scripts/release/check_drift.py
+#
+# Exit codes (from the script, passed straight through):
+#   0  in sync            -> job succeeds
+#   1  drift detected      -> job fails (this is a REAL, verified disagreement)
+#   2  a source was unreadable -> job fails (network/API blip is NEVER
+#      silently treated as "in sync" -- that would hide a real drift behind
+#      a flaky read)
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *" # daily, off the hour to avoid GitHub Actions' top-of-hour scheduling crunch
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift-check:
+    name: tag / pyproject / PyPI / release / attestation agreement
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0 # need full tag history, not just the push's shallow clone
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Run the drift check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release/check_drift.py --repo-root .
