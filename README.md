@@ -25,9 +25,14 @@ manifests = client.pricing.list_manifests()
 # Transcribe a recording and auto-generate captions for it
 transcription = client.transcribe.create(source_url="https://example.com/clip.mp4")
 captions = client.captions.generate(media_id=transcription.id, media_type="video")
+
+# Propose a plan across WAVE products for a plain-English intent (requires
+# composer:write). A proposal never executes anything.
+proposal = client.compose.compose("live captions for tomorrow's webinar")
+print(proposal.stages, proposal.price_rows, proposal.executes)  # executes is always False
 ```
 
-## All 42 APIs
+## All 43 APIs
 
 ### P1 - Core
 
@@ -100,6 +105,23 @@ captions = client.captions.generate(media_id=transcription.id, media_type="video
 | `wave.pricing`     | The seller tier-manifest registry (`pricing:read`/`:write`)   |
 | `wave.perception`  | Agentic live-media `subscribe()` control plane                |
 | `wave.inference`   | One completion endpoint through the measured funnel           |
+
+### Composer (PR4)
+
+| API            | Description                                                          |
+| -------------- | --------------------------------------------------------------------|
+| `wave.compose` | `POST /v1/compose`: propose a plan across products (`composer:write`/`:read`) |
+
+`wave.compose.compose(intent, ...)` never executes anything — the response's
+`executes` field is a literal `False`. `wave.compose.save_flow(proposal)`
+saves the proposal as a flow with `createdBy.kind: "wave-composer"`; until a
+composer:write console token exists, it never calls the console silently —
+it prints (and returns) the exact `curl` a signed-in console session can run:
+
+```python
+proposal = client.compose.compose("live captions for tomorrow's webinar", budget_usd=5)
+curl_cmd = client.compose.save_flow(proposal)  # prints the curl; does not save it itself
+```
 
 ## Error handling
 

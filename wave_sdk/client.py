@@ -18,7 +18,7 @@ logger = logging.getLogger("wave_sdk")
 # Single source of truth for the SDK version, used both in the package's
 # public __version__ (re-exported from wave_sdk/__init__.py) and here in the
 # default User-Agent header, so the two can never drift.
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 T = TypeVar("T")
 
