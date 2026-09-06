@@ -192,6 +192,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          # Trusted-ref pin (not the default `github.ref`): for `pull_request` /
+          # `pull_request_review` / `pull_request_review_comment` events the
+          # unqualified ref is refs/pull/N/merge -- the PR's OWN tree -- so a
+          # malicious PR could edit body-policy.sh in the same PR to always
+          # pass and defeat this gate. Pin to the PR's base sha (untouched by
+          # the PR) when one exists; otherwise (issues/issue_comment, which
+          # already run in the default-branch context) fall back to the
+          # default branch, which is equally trusted.
+          ref: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
+          persist-credentials: false
           # Only the gate's own scripts are needed — no reason to pay for the whole
           # tree on every comment.
           sparse-checkout: scripts/public-repo-guard
