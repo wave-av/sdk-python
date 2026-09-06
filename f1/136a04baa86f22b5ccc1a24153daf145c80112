@@ -1,0 +1,186 @@
+tests/test_realtime_auth.py
+  s_49793c5a9de056::t_e9444dc1233993 66
+  s_49793c5a9de056::t_fb4570b84a7593 14-15
+.contracts-absent.json
+  s_beeae84a30f358::t_b69feedb000dd5 1-10
+.github/workflows/ga-evidence.yml
+  s_beeae84a30f358::t_bbb9f418fbfa30 1-110
+.github/workflows/issue-ops-triage.yml
+  s_beeae84a30f358::t_b063c6a02e0177 14,19-20
+.github/workflows/python-tests.yml
+  s_beeae84a30f358::t_0fe9a3f9ae7504 1-56
+.github/workflows/release-drift.yml
+  s_beeae84a30f358::t_40d8d5d862d0aa 1-55
+.github/workflows/release.yml
+  s_beeae84a30f358::t_0ff8111cec5ca0 1-295
+.github/workflows/smoke-install.yml
+  s_beeae84a30f358::t_82ec893acd248d 1-90
+.gitignore
+  s_beeae84a30f358::t_d3890b48cdac4f 1-14
+AGENTS.md
+  s_beeae84a30f358::t_1bd74fa1c9d0b3 19-59
+CHANGELOG.md
+  s_beeae84a30f358::t_a7bdbf5ef25b16 8-81
+LICENSE
+  s_beeae84a30f358::t_f5533c965f0ef3 189
+MIGRATING.md
+  s_beeae84a30f358::t_bd5bd363f3bce2 1-109
+NOTICE
+  s_beeae84a30f358::t_ebcdd292758271 2,4,8
+PERMISSIONS.md
+  s_beeae84a30f358::t_b273f56fdfb132 1-55
+README.md
+  s_beeae84a30f358::t_22a667ad362417 3-4,15-27,30,85-103,107,110,123-145,148-149
+pyproject.toml
+  s_beeae84a30f358::t_6afe87a770e49b 7-8,10-17,20,47,54,63-67,84-86,97,118
+scripts/assert_stdlib_wave_intact.py
+  s_beeae84a30f358::t_578f614f488b0b 1-254
+scripts/ga/check-SUPPLY-001.sh
+  s_beeae84a30f358::t_f19444f3f07a89 1-29
+scripts/ga/check-VER-001.sh
+  s_beeae84a30f358::t_1776649e635a1f 1-34
+scripts/ga/check_supply_001.py
+  s_beeae84a30f358::t_8cab4e903ca2a3 1-69
+scripts/ga/check_ver_001.py
+  s_beeae84a30f358::t_a9d2994e07541b 1-171
+scripts/ga/ga_common.py
+  s_beeae84a30f358::t_5b192a6e4de689 1-166
+scripts/ga/ga_evidence.py
+  s_beeae84a30f358::t_6eaac106b4fe3c 1-115
+scripts/release/assert_version.py
+  s_beeae84a30f358::t_2fd21c1f45f9b4 1-109
+scripts/release/check_drift.py
+  s_beeae84a30f358::t_cb3479ca533d69 1-209
+scripts/release/pypi_version_exists.py
+  s_beeae84a30f358::t_7cfbee5ee50e93 1-54
+scripts/smoke_quickstart.py
+  s_beeae84a30f358::t_16fa3977d5b3e1 1-74
+tests/conftest.py
+  s_beeae84a30f358::t_9b88f6e7491a3f 12
+tests/fixtures/openapi_snapshot.json
+  s_beeae84a30f358::t_1d0a4c479068ba 1-383
+tests/test_contract_coverage.py
+  s_beeae84a30f358::t_09a74e690edf04 1-163
+tests/test_packaging.py
+  s_beeae84a30f358::t_8098cd04019119 1-201
+tests/test_parity_apis.py
+  s_beeae84a30f358::t_14a36f569fb85c 1-271
+tests/test_readme_quickstart.py
+  s_beeae84a30f358::t_abd2d720bc798e 1-25
+tests/test_release_scripts.py
+  s_beeae84a30f358::t_9ab939192d3afa 1-136
+tests/test_sdk_exports.py
+  s_beeae84a30f358::t_068b020789d9cd 4,12-13,27-28,31-32,36,48,59-60,65,73,80,126-134,137-139,142,147,155,163,170-172,177,188,191
+tests/test_x402.py
+  s_beeae84a30f358::t_6497af1fe6864e 1,17
+wave_sdk/__init__.py
+  s_beeae84a30f358::t_445edb977dd2c3 4-5,8,13,15-18,21-29,32-38,41-43,46,49-64,67-68,71-72,97-98,109-113,183-196
+wave_sdk/audience.py
+  s_beeae84a30f358::t_3ee71035fa7994 8-9
+wave_sdk/captions.py
+  s_beeae84a30f358::t_559c9a8372f7ec 9-10
+wave_sdk/chapters.py
+  s_beeae84a30f358::t_34e96e0ca2bf73 9-10
+wave_sdk/client.py
+  s_beeae84a30f358::t_673f23cffe0704 16-21,134
+wave_sdk/clips.py
+  s_beeae84a30f358::t_9756a29ed7f240 14-15
+wave_sdk/collab.py
+  s_beeae84a30f358::t_d453a4124a223a 8-9
+wave_sdk/connect.py
+  s_beeae84a30f358::t_12d43932586a33 8-9
+wave_sdk/creator.py
+  s_beeae84a30f358::t_079e9877b43696 8-9
+wave_sdk/desktop.py
+  s_beeae84a30f358::t_b414f514624d68 5-6
+wave_sdk/distribution.py
+  s_beeae84a30f358::t_8063d1b1a12943 8-9
+wave_sdk/drm.py
+  s_beeae84a30f358::t_ae30480a412203 8-9
+wave_sdk/edge.py
+  s_beeae84a30f358::t_da5d08b14fca0c 8-9
+wave_sdk/editor.py
+  s_beeae84a30f358::t_32fde5f51a1721 9-10
+wave_sdk/fleet.py
+  s_beeae84a30f358::t_644a28fe4eb99d 9-10
+wave_sdk/ghost.py
+  s_beeae84a30f358::t_bbcf414de23849 8-9
+wave_sdk/inference.py
+  s_beeae84a30f358::t_fb67655295c56a 1-132
+wave_sdk/mail.py
+  s_beeae84a30f358::t_4c9f1769224137 1-62
+wave_sdk/marketplace.py
+  s_beeae84a30f358::t_8c8305c16911cb 8-9
+wave_sdk/mesh.py
+  s_beeae84a30f358::t_e2502f8b19f9a9 8-9
+wave_sdk/meter.py
+  s_beeae84a30f358::t_8063c0bf57e9c4 1-83
+wave_sdk/notifications.py
+  s_beeae84a30f358::t_f7f4ac6734ba3d 8-9
+wave_sdk/perception.py
+  s_beeae84a30f358::t_9060e71ae111de 1-131
+wave_sdk/phone.py
+  s_beeae84a30f358::t_09afce5256b5f3 9-10
+wave_sdk/pipeline.py
+  s_beeae84a30f358::t_bc197db98c2cbc 9-10
+wave_sdk/podcast.py
+  s_beeae84a30f358::t_8a8f5ef4e7e01f 8-9
+wave_sdk/pricing.py
+  s_beeae84a30f358::t_225595fa6dcca2 1-79
+wave_sdk/prism.py
+  s_beeae84a30f358::t_b42a954b812513 8-9
+wave_sdk/pulse.py
+  s_beeae84a30f358::t_58f35a3e05b687 5-6
+wave_sdk/qr.py
+  s_beeae84a30f358::t_741052ea3a349f 8-9
+wave_sdk/scene.py
+  s_beeae84a30f358::t_12e80df4935b87 9-10
+wave_sdk/search.py
+  s_beeae84a30f358::t_c41daa98d11907 9-10
+wave_sdk/sentiment.py
+  s_beeae84a30f358::t_d477b3f47ff721 9-10
+wave_sdk/signage.py
+  s_beeae84a30f358::t_d1a59ed544ae7f 8-9
+wave_sdk/slides.py
+  s_beeae84a30f358::t_6f7f9182a06c33 9-10
+wave_sdk/studio.py
+  s_beeae84a30f358::t_99e1499e6c269e 8-9
+wave_sdk/studio_ai.py
+  s_beeae84a30f358::t_c4bf3a8eb38181 8-9
+wave_sdk/transcribe.py
+  s_beeae84a30f358::t_978a4554bd3f86 9-10
+wave_sdk/transcripts.py
+  s_beeae84a30f358::t_3c1ebb0f7b27ff 1-40
+wave_sdk/usb.py
+  s_beeae84a30f358::t_2ef3011ad9de69 8-9
+wave_sdk/vault.py
+  s_beeae84a30f358::t_eaa53bb2e616f3 8-9
+wave_sdk/voice.py
+  s_beeae84a30f358::t_eebd7348a40490 9-10
+wave_sdk/zoom.py
+  s_beeae84a30f358::t_53312698c3972b 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f1136a04baa86f22b5ccc1a24153daf145c80112",
+  "prompts": {},
+  "sessions": {
+    "s_49793c5a9de056": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d315ea56-91aa-4d81-9939-eac4eba83179",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    },
+    "s_beeae84a30f358": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab9403b7c051e5812",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
