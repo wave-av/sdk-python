@@ -2,7 +2,7 @@ name: release
 
 # Codified release-on-tag pipeline for wave-sdk (PyPI: wave-sdk, PyPI Trusted
 # Publishing, no stored token -- decision IGV-D-010: no per-repo publish
-# secrets). Four jobs, each with its own minimal `permissions:`:
+# secrets). Five jobs, each with its own minimal `permissions:`:
 #
 #   resolve-ref -- resolves + strictly validates the tag (push ref or
 #              dispatch input) BEFORE it reaches any git/python/gh command as
@@ -23,15 +23,35 @@ name: release
 #              (checked live against pypi.org before publishing), the publish
 #              step is skipped with a clear log line and the job still
 #              succeeds -- a re-run must be idempotent, not a hard failure.
-#   release -- contents: write only. Creates the GitHub Release for the tag
-#              with generated notes and the sdist+wheel attached. Idempotent:
-#              if the release already exists, it edits/uploads onto it
-#              instead of failing.
+#   sbom    -- contents: read (no repo write -- only builds an artifact).
+#              Downloads the ACTUAL PUBLISHED wheel from PyPI by
+#              name==version (`pip download wave-sdk==<version>`, never a
+#              hand-built files.pythonhosted.org URL) so the SBOM always
+#              describes exactly what PyPI serves, not a possibly
+#              nondeterministic local rebuild; generates SPDX-JSON with
+#              anchore/sbom-action (wraps syft, pinned to a full commit SHA)
+#              and uploads it as a *workflow* artifact for `release` to pick
+#              up -- kept fully separate from `publish`'s id-token: write.
+#   release -- contents: write only. Creates/updates the GitHub Release for
+#              the tag with the sdist+wheel AND the SBOM attached in the SAME
+#              `gh release create`/`upload` call, so a Release is never
+#              visible without its SBOM. Idempotent (--clobber re-upload).
 #
 # Triggers on `v*` tag pushes AND `workflow_dispatch` with a `tag` input, so
 # an existing tag (e.g. the current v2.1.0, pushed before this workflow
 # existed) can be backfilled on demand:
 #   gh workflow run release.yml --repo wave-av/sdk-python --ref main -f tag=v2.1.0
+#
+# The `tag` dispatch input is optional (default "latest"): a blank input or
+# the literal "latest" resolves to the most recent GitHub Release's tag, so
+# an SBOM can be backfilled onto whatever already shipped (e.g. v2.2.0)
+# without typing/guessing a tag name and without a new PyPI publish -- the
+# `publish` job's existing PyPI-version-exists check already no-ops the
+# publish step for a version PyPI already has, and `release`'s existing
+# create-or-clobber-upload logic already handles a pre-existing release, so
+# a full pipeline re-run against an already-released tag is a safe,
+# idempotent SBOM-only backfill in practice:
+#   gh workflow run release.yml --repo wave-av/sdk-python --ref main -f tag=v2.2.0
 #
 # Every `uses:` below is pinned to a 40-character commit SHA with the human
 # version in a trailing comment -- a tag ref (`@v6`) is a mutable pointer an
@@ -48,8 +68,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to verify/publish/release, e.g. v2.1.0 (backfill an existing tag)"
-        required: true
+        description: >-
+          Tag to verify/publish/release/SBOM, e.g. v2.1.0 (backfill an
+          existing tag). Leave blank or "latest" to resolve the most recent
+          GitHub Release's tag -- e.g. to backfill an SBOM onto an
+          already-published release without a new PyPI publish.
+        required: false
+        default: "latest"
         type: string
 
 permissions:
@@ -93,11 +118,40 @@ jobs:
       - name: Resolve and validate the tag to release
         id: resolve
         env:
+          EVENT_NAME: ${{ github.event_name }}
           DISPATCH_TAG: ${{ github.event.inputs.tag }}
           PUSH_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          TAG="${DISPATCH_TAG:-$PUSH_TAG}"
+
+          # Branch on the EVENT, not on whether DISPATCH_TAG happens to be
+          # set -- a tag push's ambient github.ref_name is the pushed tag
+          # (always correct to use as-is), but a workflow_dispatch's
+          # github.ref_name is the branch it was run from (e.g. "main"),
+          # which must NEVER be treated as a candidate release tag.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="${DISPATCH_TAG:-latest}"
+
+            # A blank dispatch input, or the literal sentinel "latest",
+            # resolves to the most recent GitHub Release's tag -- lets an
+            # operator backfill an SBOM onto whatever already shipped
+            # without typing/guessing the tag name. `gh release view`
+            # (no arg) returns the release GitHub itself marks "Latest";
+            # contents: read is sufficient to read releases on this repo.
+            if [[ -z "$TAG" || "$TAG" == "latest" ]]; then
+              RESOLVED="$(gh release view --json tagName --jq .tagName)"
+              if [[ -z "$RESOLVED" ]]; then
+                echo "::error::could not resolve 'latest' -- no GitHub Release found in this repository"
+                exit 1
+              fi
+              echo "resolved dispatch tag 'latest' -> $RESOLVED"
+              TAG="$RESOLVED"
+            fi
+          else
+            TAG="$PUSH_TAG"
+          fi
 
           # 1. Format -- full-anchored regex, not a glob -- refuses anything
           #    that isn't exactly `v<semver>`. This value flows into a `ref:`
@@ -260,13 +314,92 @@ jobs:
         if: steps.pypi_check.outputs.exists == 'true'
         run: echo "::notice::wave-sdk ${{ needs.verify.outputs.version }} is already on PyPI -- skipping publish, proceeding to release job"
 
-  release:
-    name: create GitHub Release
-    needs: [resolve-ref, publish]
+  # ---------------------------------------------------------------------------
+  # SUPPLY-001. Every published release carries an SBOM asset -- generated
+  # here as a build artifact, then attached by `release` (below) in the SAME
+  # `gh release create`/`upload` call as dist/*, so a Release is never
+  # visible without its SBOM (no window where the Release exists but the
+  # SBOM doesn't). Downloads the ACTUAL PUBLISHED wheel from PyPI by
+  # name==version (never a hand-built files.pythonhosted.org URL;
+  # --only-binary=:all: so a missing wheel fails loud instead of silently
+  # SBOM-ing the sdist) rather than reusing `verify`'s locally built dist/
+  # artifact: a rebuild is not guaranteed byte-identical to what PyPI
+  # actually serves, and the SBOM must describe what ships, not what was
+  # built pre-publish.
+  # ---------------------------------------------------------------------------
+  sbom:
+    name: generate SBOM
+    needs: [resolve-ref, verify, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read   # only reads PyPI + writes a local build artifact -- no repo write
+    steps:
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Download the published wheel from PyPI (by name==version, never a direct URL)
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p sbom-src
+          python -m pip install --upgrade pip
+
+          # PyPI's CDN can lag a few seconds behind a Trusted-Publishing
+          # upload -- retry rather than fail on that race. --only-binary
+          # forces a hard failure instead of silently falling back to an
+          # sdist if no compatible wheel is found.
+          ok=false
+          for attempt in 1 2 3 4 5 6; do
+            if python -m pip download "wave-sdk==${VERSION}" --no-deps --only-binary=:all: -d sbom-src; then
+              ok=true
+              break
+            fi
+            echo "pip download attempt ${attempt} failed, retrying in 10s..."
+            sleep 10
+          done
+          if [ "$ok" != "true" ]; then
+            echo "::error::could not download a wave-sdk==${VERSION} wheel from PyPI after 6 attempts"
+            exit 1
+          fi
+          ls -la sbom-src
+
+      - name: Generate SPDX-JSON SBOM for the published wheel
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          path: sbom-src
+          format: spdx-json
+          output-file: wave_sdk-${{ needs.verify.outputs.version }}.spdx.json
+
+      - name: Validate the SBOM has a non-empty packages[]
+        env:
+          FILE: wave_sdk-${{ needs.verify.outputs.version }}.spdx.json
+        run: |
+          set -euo pipefail
+          test -s "$FILE" || { echo "::error::${FILE} is missing or empty"; exit 1; }
+          python3 -c "
+          import json, os
+          d = json.load(open(os.environ['FILE']))
+          assert d.get('packages'), 'SBOM has no packages[]'
+          print('SBOM OK:', d.get('spdxVersion'), '-', len(d['packages']), 'package(s)')
+          "
+
+      - name: Upload SBOM as a workflow artifact (for the release job to attach)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-${{ needs.resolve-ref.outputs.tag }}
+          path: wave_sdk-${{ needs.verify.outputs.version }}.spdx.json
+          retention-days: 14
+
+  release:
+    name: create GitHub Release
+    needs: [resolve-ref, publish, sbom]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # create/upload the Release for this tag -- nothing else
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -278,18 +411,29 @@ jobs:
           name: dist-${{ needs.resolve-ref.outputs.tag }}
           path: dist
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom-${{ needs.resolve-ref.outputs.tag }}
+          path: sbom
+
       - name: Create or update the GitHub Release for this tag (idempotent)
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.resolve-ref.outputs.tag }}
         run: |
-          set -e
-          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "::notice::release $TAG already exists -- uploading dist assets (clobber) instead of creating"
-            gh release upload "$TAG" dist/* --repo "${{ github.repository }}" --clobber
+          set -euo pipefail
+          shopt -s nullglob
+          ASSETS=(dist/* sbom/*)
+          if [ "${#ASSETS[@]}" -eq 0 ]; then
+            echo "::error::no dist/ or sbom/ files to attach to the release"
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::release $TAG already exists -- uploading dist+SBOM assets (clobber) instead of creating"
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
-            gh release create "$TAG" dist/* \
-              --repo "${{ github.repository }}" \
+            gh release create "$TAG" "${ASSETS[@]}" \
               --title "wave-sdk $TAG" \
               --generate-notes
           fi
