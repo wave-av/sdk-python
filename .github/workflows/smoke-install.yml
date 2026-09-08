@@ -1,0 +1,90 @@
+name: smoke install
+
+# Regression guard for the fresh-install class of bug: builds the wheel from
+# this checkout, installs it (no `-e`, no repo on sys.path) into a throwaway
+# venv, and proves the installed package imports and reaches the live WAVE
+# gateway with the README's own quickstart. Running `pytest` from the repo
+# checkout does NOT catch this class of bug (the checkout dir is first on
+# sys.path and hides an import collision that only appears once the package
+# is actually installed and run from elsewhere) — this workflow is the one
+# gate that runs it the way a real `pip install wave-sdk` user does.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-install-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build --wheel
+
+      - name: Create fresh venv (no repo on sys.path)
+        run: python -m venv "$RUNNER_TEMP/smoke"
+
+      - name: Install the built wheel
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          "$RUNNER_TEMP/smoke/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/smoke/bin/pip" install "$WHEEL"
+
+      - name: Import check (installed wheel, run away from the repo)
+        working-directory: ${{ runner.temp }}/smoke
+        run: |
+          bin/python -c "
+          import wave_sdk
+          print('wave_sdk', wave_sdk.__version__, 'imported from', wave_sdk.__file__)
+          from wave_sdk import Wave
+          print('Wave facade OK,', len([n for n in dir(wave_sdk) if n.endswith('API')]), 'API classes')
+          "
+
+      # The import check above proves `wave_sdk` is reachable. It does NOT prove we
+      # left CPython's `wave` alone -- the shipped 2.0.0 wheel passed an equivalent
+      # check in the configurations where the stdlib happened to win, and still broke
+      # `wave.open()` for every library in the environment wherever site-packages led
+      # sys.path. This step asserts both halves against the INSTALLED artifact.
+      - name: Copy the stdlib-shadow guard into the smoke venv
+        run: cp scripts/assert_stdlib_wave_intact.py "$RUNNER_TEMP/smoke/assert_stdlib_wave_intact.py"
+
+      - name: Assert `import wave` still resolves to the CPython stdlib
+        working-directory: ${{ runner.temp }}/smoke
+        run: bin/python assert_stdlib_wave_intact.py --dist wave-sdk --module wave_sdk
+
+      - name: Copy quickstart into the smoke venv's working directory
+        run: cp scripts/smoke_quickstart.py "$RUNNER_TEMP/smoke/smoke_quickstart.py"
+
+      - name: README quickstart (live gateway, real credentials)
+        working-directory: ${{ runner.temp }}/smoke
+        env:
+          WAVE_GATEWAY_API_KEY: ${{ secrets.WAVE_GATEWAY_API_KEY }}
+        run: |
+          if [ -z "$WAVE_GATEWAY_API_KEY" ]; then
+            echo "skipped: WAVE_GATEWAY_API_KEY absent (fork or unset)"
+            exit 0
+          fi
+          bin/python smoke_quickstart.py

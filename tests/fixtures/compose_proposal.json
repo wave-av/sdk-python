@@ -1,0 +1,31 @@
+{
+  "id": "prp_webinar_captions_001",
+  "intent": "live captions for tomorrow's webinar",
+  "stages": [
+    { "product": "realtime", "why": "carries your webinar audio in real time" },
+    { "product": "transcribe", "why": "turns speech into timed text as it happens" },
+    { "product": "captions", "why": "puts that text on the stream for viewers" }
+  ],
+  "productIds": ["realtime", "transcribe", "captions"],
+  "tools": ["perception_subscribe", "wave_create_transcription", "wave_create_caption_job"],
+  "scopes": [
+    { "scope": "realtime:read", "mintable": true, "source": "open-by-default.ts:101" },
+    { "scope": "transcribe:write", "mintable": true, "source": "open-by-default.ts:118" },
+    { "scope": "captions:write", "mintable": true, "source": "open-by-default.ts:126" }
+  ],
+  "priceRows": [
+    { "product": "captions", "meter": "wave_caption_minutes", "usd": 0.025, "unit": "caption minute", "quotedAt": 1757100000, "validForS": 60 },
+    { "product": "realtime", "meter": "wave_realtime_video_minutes", "quote": "quote at call time", "reason": "gateway default, no quote_token" }
+  ],
+  "callShape": {
+    "http": "curl -X POST https://gateway.wave.online/v1/captions -H \"Authorization: Bearer $WAVE_API_KEY\" -d '{\"media_id\":\"...\"}'",
+    "mcp": { "tool": "wave_create_caption_job", "args": { "media_id": "..." } }
+  },
+  "next": ["Add chapters after the webinar ends", "Save the caption style as a preset"],
+  "executes": false,
+  "grounding": "live",
+  "groundedAt": "2026-09-06T04:12:09Z",
+  "manifestHash": "sha256:59b188cc00000000000000000000000000000000000000000000000000abcd",
+  "engine": { "route": "dispatch", "promptHash": "sha256:0000000000000000000000000000000000000000000000000000000000ab", "model": null },
+  "flowId": null
+}

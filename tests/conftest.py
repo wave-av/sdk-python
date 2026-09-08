@@ -9,5 +9,5 @@ def api_key():
 
 @pytest.fixture
 def wave_client():
-    from wave import Wave
+    from wave_sdk import Wave
     return Wave(api_key="test-api-key", organization_id="org_test")
