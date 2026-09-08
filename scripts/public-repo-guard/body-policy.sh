@@ -19,17 +19,14 @@
 #
 # Allowlisting: a line carrying `guard:allow <reason>` is exempt (an accidental
 # leak never carries the marker; a deliberate one is visible in a public diff).
-# The ABOUT-THE-CONTROL allowlist below additionally exempts the HEURISTIC prose
-# rules only — a credential format is a leak no matter what else the line says.
+# Prose-shaped rules (tagged `prose` below) are additionally exempt on lines
+# matching the ABOUT-THE-CONTROL allowlist; credential and infrastructure rules
+# are NOT — a real key is a leak no matter what else shares its line.
 set -uo pipefail
 
 FILE="${1:-}"
 [[ -n "$FILE" && -f "$FILE" ]] || { echo "::error::body-policy: usage: body-policy.sh <file>"; exit 2; }
 command -v rg >/dev/null 2>&1 || { echo "::error::body-policy: ripgrep (rg) required"; exit 2; }
-# Every rule here is -P (PCRE2). Distro rg packages are sometimes built without
-# it; that build fails every scan with exit 2, so refuse it up front with a
-# message that says WHY instead of 21 opaque "ripgrep failed" annotations.
-rg --pcre2-version >/dev/null 2>&1 || { echo "::error::body-policy: this ripgrep build lacks PCRE2 (-P) — install a PCRE2-capable rg"; exit 2; }
 
 VIOLATIONS=0
 
@@ -38,16 +35,18 @@ VIOLATIONS=0
 # self-referential trap that gets a gate switched off. Ported verbatim in intent
 # from the client-side gate's allowlist, which was built for exactly this.
 #
-# SCOPE: only rules that opt in via the `prose` flag honour this allowlist — the
-# HEURISTIC rules, whose matches are ordinary words that genuinely occur when
-# discussing the gate. The credential-format and infrastructure rules never
-# honour it: a real key is a leak even on a line that names SECURITY.md, and
-# exempting it there would make "mention the policy" a one-line bypass.
+# Scope: consulted ONLY by rules tagged `prose` below — the ones that fire on the
+# LANGUAGE of a sentence and therefore misfire on sentences about the gate. A
+# credential or infrastructure identifier is a leak regardless of what else shares
+# its line; naming the gate next to a live key must not launder the key, so those
+# rules never see this allowlist and `guard:allow <reason>` is their only
+# (visible) escape hatch.
 ABOUT_THE_CONTROL='(public-repo-guard|body-policy|content-policy|public-github-write-gate|\bNDA\s+(gate|guard|policy|denylist|sweep|scan|hook)\b|\bno\s+NDA\b|responsib\w*\s+disclos|SECURITY\.md)'
 
 # check <BLOCK|WARN> <name> <regex> <why> [prose]
-#   The optional 5th arg `prose` marks a HEURISTIC rule whose hits may also be
-#   legitimate discussion of the gate itself; only those honour ABOUT_THE_CONTROL.
+#   `prose` opts the rule into the ABOUT_THE_CONTROL allowlist above. Omit it for
+#   credential/infrastructure rules so a same-line mention of the gate can never
+#   suppress a real leak.
 check() {
   local sev="$1" name="$2" re="$3" why="$4" scope="${5:-}"
   [[ -z "$re" ]] && { echo "::error::body-policy: internal bug — empty regex for rule '$name'"; exit 2; }
@@ -62,11 +61,24 @@ check() {
   # Filter with rg, not grep: BSD/macOS grep has no -P, so a `grep -P` allowlist
   # silently errors out locally while working on GNU/CI — the gate would then
   # disagree with itself depending on where it ran. rg is already required above.
+  #
+  # The filters fail CLOSED exactly like the main scan: exit 1 only means every
+  # hit was filtered away (fine), but exit >= 2 is a broken filter, and a broken
+  # filter that empties the match list would convert detected leaks into a
+  # silent pass. That is why there is no `|| true` here.
   local matches
   matches="$(printf '%s' "$raw" \
-    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' || true)"
-  if [[ "$scope" == "prose" ]]; then
-    matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]')"; rc=$?
+  if (( rc >= 2 )); then
+    echo "::error title=public-repo-guard ($name)::ripgrep failed (exit $rc) in the guard:allow filter for rule '$name'. Failing closed."
+    exit 2
+  fi
+  if [[ "$scope" == "prose" && -n "$matches" ]]; then
+    matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL")"; rc=$?
+    if (( rc >= 2 )); then
+      echo "::error title=public-repo-guard ($name)::ripgrep failed (exit $rc) in the ABOUT_THE_CONTROL filter for rule '$name'. Failing closed."
+      exit 2
+    fi
   fi
   [[ -z "$matches" ]] && return 0
   local count; count="$(printf '%s\n' "$matches" | grep -c '')"
@@ -95,9 +107,27 @@ check BLOCK private-key      '-----BEGIN [A-Z ]*PRIVATE KEY-----'            'Em
 # --- Infrastructure identifiers ----------------------------------------------
 # shellcheck disable=SC2016  # $CLOUDFLARE_ACCOUNT_ID is literal guidance text
 check BLOCK cf-account-id    'account_id\s*[:=]\s*["'"'"']?[0-9a-f]{32}'      'Hardcoded Cloudflare account_id — reference the env var instead'
-check BLOCK internal-ip      '100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}'  'Internal Tailscale-CGNAT IP (100.64.0.0/10) — internal fleet address'
+# The BODY profile diverges from the FILE gate here too. The tree gate excludes
+# the guard's own directory from scanning, so its copy of this rule never sees
+# the range literal in its own comments; body text has no such exclusion, and
+# security discussion names the range's documentation form constantly (including
+# quoting this very rule). Two shapes are RANGE-talk, not a fleet address, and
+# are exempted: an all-zero host portion (100.64.0.0) and a CIDR-suffixed subnet
+# (100.64.0.0/10, 100.71.4.0/24). A concrete host like 100.71.4.19 still blocks.
+# Trade accepted: a live address written with a /32 suffix no longer fires.
+check BLOCK internal-ip      '100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.(?!0\.0(?![0-9]))[0-9]{1,3}\.[0-9]{1,3}(?![0-9]|/[0-9])'  'Internal Tailscale-CGNAT IP (100.64.0.0/10) — internal fleet address'
 # shellcheck disable=SC2016  # $HOME is literal guidance text
-check BLOCK abs-user-path    '/(Users|home)/(?!runner/)[a-z][a-z0-9._-]+/'    'Operator absolute home path — leaks identity and local layout'
+# The BODY profile diverges from the FILE gate here for the same reason as
+# private-repo-ops below: body text is prose, and prose contains app routes.
+# "/home/<word>/" is an ordinary URL path shape ("See /home/dashboard/settings"),
+# so the file gate's bare two-segment form would fire on routine product talk.
+# What marks an OPERATOR path is what follows the username: further layout (one
+# more path segment) or a file (a dot-bearing final segment, which also catches
+# dotdirs like .config). The lookbehind keeps the rule out of absolute URLs,
+# where /home/ is preceded by a hostname character. The username class accepts
+# capitals: /Users/Someone/ leaks exactly as much as /Users/someone/. Trade
+# accepted: a bare "/home/alice/" with nothing after it no longer fires.
+check BLOCK abs-user-path    '(?<![\w.])/(Users|home)/(?!runner/)[A-Za-z][A-Za-z0-9._-]+/(?:[A-Za-z0-9._-]+/[A-Za-z0-9._-]|[A-Za-z0-9_-]*\.[A-Za-z0-9])' 'Operator absolute home path — leaks identity and local layout'
 
 # --- Self-identified internal material ---------------------------------------
 # USE vs MENTION. A body that SAYS "internal-only" is leaking; a body that QUOTES
@@ -112,7 +142,12 @@ check BLOCK abs-user-path    '/(Users|home)/(?!runner/)[a-z][a-z0-9._-]+/'    'O
 # A quoted marker is also a trivial bypass, and that is an accepted trade. The
 # threat here is the ACCIDENTAL paste; a deliberate evader has easier routes, and
 # `guard:allow <reason>` already exists as the honest, visible one.
-check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(share|publish|distribute)|for\s+internal\s+use)\b(?![”"'"'"'`])' 'Text self-identifies as not-for-public' prose
+#
+# Case-insensitivity is scoped per-rule with (?i:...), never a leading (?i): a
+# sentence-initial "Internal-only" and a shouted "DO NOT SHARE" are the common
+# real forms of this marker, while the credential rules above keep their
+# deliberate case requirements intact.
+check BLOCK internal-marker  '(?<![“"'"'"'`])\b(?i:internal[- ]only|do\s+not\s+(?:share|publish|distribute)|for\s+internal\s+use)\b(?![”"'"'"'`])' 'Text self-identifies as not-for-public' prose
 
 # --- Private repo + operational detail (PROXIMITY, not bare name) ------------
 # The BODY profile deliberately DIVERGES from the FILE profile here, and the
@@ -122,45 +157,63 @@ check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(s
 # references ("companion to <private-repo>#260"). A gate that fires on all of
 # those gets switched off, and then it protects nothing.
 #
-# So a bare mention stays silent. What fires is a private repo name within ~140
-# characters of INTERNAL OPERATIONAL DETAIL — a SCREAMING_CASE credential NAME, a
-# secret-binding verb, a service binding, or a secret COUNT. That is the topology
-# of what is wired to what, and it is the shape that actually leaked.
+# So a bare mention stays silent. What fires is a private repo name and INTERNAL
+# OPERATIONAL DETAIL on the SAME LINE, within ~140 characters of each other — a
+# SCREAMING_CASE credential NAME, a secret-binding verb, a service binding, or a
+# secret COUNT. That is the topology of what is wired to what, and it is the
+# shape that actually leaked. Trade accepted: the scan is line-scoped (rg matches
+# per line and the separator excludes newlines), so a repo name on one line and
+# the detail on the next does not fire. Cross-line proximity would need multiline
+# scanning with its own false-positive budget; revisit if that shape leaks.
 #
 # Names are NOT hardcoded (this file is public); CI injects them via the
-# GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped. In CI
-# (GITHUB_ACTIONS set) an empty variable FAILS CLOSED instead: a missing or
-# renamed org variable would otherwise silently skip this rule and report a
-# pass over an unscanned leak class: a green rubber stamp, not a verdict.
-_ALT=''
+# GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped.
+_PRIVATE_REPO_OPS_RAN=0
 if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
-  # The credential-NAME alternative is SCREAMING_CASE on purpose (that is how a
-  # binding name is written; `session_token` in prose is just code talk), so it
-  # must stay case-SENSITIVE. The phrase alternatives are ordinary English and
-  # get their own scoped (?i:) — never a global flag, which would silently make
-  # the SCREAMING_CASE branch match lowercase identifiers too.
-  OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|(?i:wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding)|\d{2,}\s+secrets)'
-  IFS=', ' read -r -a _PRIV <<< "$GUARD_PRIVATE_REPOS"
+  OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding|\d{2,}\s+secrets)'
+  _ALT=''
+  # The org variable may be comma- OR newline-separated; `read` stops at the first
+  # newline, which would silently configure only the FIRST name and then report a
+  # pass over every unscanned name after it. Normalise newlines to spaces before
+  # splitting — carriage returns too: a CRLF-stored value would otherwise leave an
+  # invisible \r glued to each name, so the built regex matches nothing and the
+  # rule fail-opens with no diagnostic at all.
+  IFS=', ' read -r -a _PRIV <<< "${GUARD_PRIVATE_REPOS//[$'\n'$'\r']/ }"
   for _name in "${_PRIV[@]}"; do
     [[ -z "$_name" ]] && continue
     # Regex-escape so metacharacters in a name match literally.
     _esc="$(printf '%s' "$_name" | sed -E 's/[][(){}.^$*+?|\\]/\\&/g')"
     _ALT="${_ALT:+$_ALT|}${_esc}"
   done
+  if [[ -n "$_ALT" ]]; then
+    _PRIVATE_REPO_OPS_RAN=1
+    # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
+    # scoped with (?i:...) to the REPO NAME alone: a leading (?i) would bleed into
+    # OPS_DETAIL and turn its deliberate SCREAMING_CASE requirement into a match
+    # on everyday lowercase words (docs/setup_key.md, process.env.api_token),
+    # blocking exactly the bare cross-references this rule promises to leave alone.
+    #
+    # No \b in front of OPS_DETAIL: a multi-segment credential name like
+    # EXAMPLE_LEASE_SECRET can only start its match at the inner segment (LEASE),
+    # and the underscore before it is a word character, so a boundary there never
+    # exists — a leading \b silently exempted every credential name with more than
+    # one underscore when it followed the repo name. Uppercase-shape matching does
+    # not need the anchor; starting mid-token still evidences a credential name.
+    check BLOCK private-repo-ops \
+      "(?i:\\b(?:${_ALT})\\b)[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?(?i:\\b(?:${_ALT})\\b)" \
+      'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' \
+      prose
+  fi
 fi
-if [[ -n "$_ALT" ]]; then
-  # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
-  # scoped to the repo NAMES only — see the OPS_DETAIL comment above.
-  # No \b in front of OPS_DETAIL in either branch: for a multi-segment name
-  # like WAVE_VIEWPORT_LEASE_SECRET the credential alternative can only match
-  # the trailing LEASE_SECRET, and that position is NOT a word boundary
-  # (underscore is a word character) — a \b there silently drops every
-  # compound credential name from the name-first order.
-  check BLOCK private-repo-ops \
-    "\\b(?i:${_ALT})\\b[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
-    'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public' prose
-elif [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  echo "::error title=public-repo-guard (private-repo-ops)::GUARD_PRIVATE_REPOS is empty: the org/repo variable is missing, renamed, or contains no names. Refusing to report a pass over an unscanned leak class; configure the variable (fails closed in CI only)."
+# Unset locally is fine (the fixtures pin their own names). In CI it is not: an
+# empty or names-free variable means the flagship rule scanned NOTHING while the
+# job still reports green — the quiet inverse of this script's fail-closed
+# posture, and precisely the "green rubber stamp over an unexamined class" that
+# every other stage here refuses. A missing or renamed org variable must go RED,
+# not emit a warning nobody reads, so this fails CLOSED in CI (GITHUB_ACTIONS
+# set) and stays a silent skip only for local runs.
+if [[ "$_PRIVATE_REPO_OPS_RAN" == 0 && -n "${GITHUB_ACTIONS:-}" ]]; then
+  echo "::error title=public-repo-guard (private-repo-ops)::GUARD_PRIVATE_REPOS is empty or contains no names: the private-repo-ops rule scanned nothing this run. Refusing to report a pass over an unscanned leak class — configure the org/repo Actions variable. (Fails closed in CI only; a local run skips the rule.)"
   exit 2
 fi
 
