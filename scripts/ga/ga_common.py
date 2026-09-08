@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import re
 import subprocess
 import urllib.error
@@ -14,7 +15,7 @@ import urllib.request
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import tomllib
 
@@ -22,9 +23,33 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 USER_AGENT = "wave-ga-evidence-sdk-python/1.0"
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 
+# GitHub's REST API caps *unauthenticated* requests at 60/hour per source IP —
+# a limit CI runners sharing NAT'd IP pools blow through easily, which used to
+# surface as a 403 that this module turned into a RegistryError and
+# ga_evidence.py then reported as exit 2 "could not run" (an absent
+# measurement standing in for a real check). Sending the ambient CI job token
+# raises that to 1000/hour and is a read-only, job-scoped credential — never a
+# new secret. The header is attached ONLY when the request targets
+# api.github.com; it must never leak to pypi.org or any other host.
+GITHUB_API_HOST = "api.github.com"
+
 
 class RegistryError(RuntimeError):
     """Raised when a public registry cannot be reached — always exit 2, never a pass."""
+
+
+def _github_token() -> str | None:
+    return os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or None
+
+
+def _headers_for(url: str) -> dict[str, str]:
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    if urlsplit(url).hostname == GITHUB_API_HOST:
+        token = _github_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+            headers["X-GitHub-Api-Version"] = "2022-11-28"
+    return headers
 
 
 def semver_tuple(v: str) -> tuple[int, int, int] | None:
@@ -35,26 +60,41 @@ def semver_tuple(v: str) -> tuple[int, int, int] | None:
 
 
 def fetch_json(url: str, timeout: int = 30) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    req = urllib.request.Request(url, headers=_headers_for(url))
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as e:
+    except urllib.error.HTTPError as e:
+        raise RegistryError(f"GET {url} failed: HTTP {e.code}: {_error_body(e)}") from e
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
         raise RegistryError(f"GET {url} failed: {type(e).__name__}: {e}") from e
 
 
 def fetch_json_allow_404(url: str, timeout: int = 30) -> tuple[int, dict | None]:
-    """Like fetch_json but a 404 is a normal, expected outcome — not a registry failure."""
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    """Like fetch_json but a 404 is a normal, expected outcome — not a registry failure.
+
+    Any OTHER non-2xx response (403 rate-limit, 429, 5xx, ...) is still a
+    RegistryError with the response body attached — never silently downgraded
+    to "could not run" without detail, and never treated as if the resource
+    were simply absent.
+    """
+    req = urllib.request.Request(url, headers=_headers_for(url))
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return 404, None
-        raise RegistryError(f"GET {url} failed: HTTP {e.code}") from e
+        raise RegistryError(f"GET {url} failed: HTTP {e.code}: {_error_body(e)}") from e
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
         raise RegistryError(f"GET {url} failed: {type(e).__name__}: {e}") from e
+
+
+def _error_body(exc: urllib.error.HTTPError, limit: int = 500) -> str:
+    try:
+        return exc.read()[:limit].decode("utf-8", errors="replace")
+    except Exception:  # noqa: BLE001 -- best-effort diagnostic only
+        return "<unreadable body>"
 
 
 def fetch_bytes(url: str, timeout: int = 60) -> bytes:
