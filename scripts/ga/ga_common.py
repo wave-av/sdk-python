@@ -17,7 +17,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
-import tomllib
+try:  # tomllib is stdlib from 3.11; `tomli` is a dev dependency below that (see pyproject.toml).
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 USER_AGENT = "wave-ga-evidence-sdk-python/1.0"
