@@ -1,7 +1,7 @@
 """
 SDK Export Verification Tests
 
-Validates that all 42 SDK modules import correctly, all API classes
+Validates that all 43 SDK modules import correctly, all API classes
 instantiate with WaveClient, and the Wave convenience class wires everything.
 """
 
@@ -9,13 +9,14 @@ import pytest
 
 
 def test_all_modules_import():
-    """All 42 API modules should be importable from the wave_sdk package."""
+    """All 43 API modules should be importable from the wave_sdk package."""
     from wave_sdk import (
         AudienceAPI,
         CaptionsAPI,
         ChaptersAPI,
         ClipsAPI,
         CollabAPI,
+        ComposeAPI,
         ConnectAPI,
         CreatorAPI,
         DesktopAPI,
@@ -53,6 +54,7 @@ def test_all_modules_import():
     )
     # All should be classes
     assert callable(ClipsAPI)
+    assert callable(ComposeAPI)
     assert callable(PipelineAPI)
     assert callable(PrismAPI)
     assert callable(UsbAPI)
@@ -132,14 +134,18 @@ def test_wave_convenience_class():
     assert hasattr(w, 'perception')
     assert hasattr(w, 'inference')
 
+    # PR4: the Composer rendering (POST /v1/compose)
+    assert hasattr(w, 'compose')
+
 
 def test_api_count():
-    """Wave class should have exactly 42 API bindings (+ client) — parity with the
-    TS SDK's 42 Wave-facade namespaces (43 including the base client)."""
+    """Wave class should have exactly 43 API bindings (+ client) — the 42
+    TS-parity namespaces plus PR4's `compose` (a mirror of `@wave-av/sdk`'s
+    own PR4-SDK addition, tracked separately in wave-av/sdk)."""
     from wave_sdk import Wave
     w = Wave(api_key="test-key")
     api_attrs = [a for a in dir(w) if not a.startswith('_') and a != 'client']
-    assert len(api_attrs) == 42, f"Expected 42 APIs, got {len(api_attrs)}: {api_attrs}"
+    assert len(api_attrs) == 43, f"Expected 43 APIs, got {len(api_attrs)}: {api_attrs}"
 
 
 def test_pipeline_has_methods():
@@ -167,9 +173,9 @@ def test_studio_has_methods():
 
 
 def test_version():
-    """SDK version should be 2.1.0."""
+    """SDK version should be 2.2.0."""
     import wave_sdk
-    assert wave_sdk.__version__ == "2.1.0"
+    assert wave_sdk.__version__ == "2.2.0"
 
 
 def test_all_exports():
@@ -186,6 +192,7 @@ def test_all_exports():
         "DesktopAPI", "SignageAPI", "QrAPI", "AudienceAPI", "CreatorAPI",
         "PodcastAPI", "SlidesAPI", "UsbAPI",
         "TranscriptAPI", "MailAPI", "MeterAPI", "PricingAPI", "PerceptionAPI", "InferenceAPI",
+        "ComposeAPI",
     ]
     for cls in expected:
         assert cls in wave_sdk.__all__, f"{cls} missing from __all__"

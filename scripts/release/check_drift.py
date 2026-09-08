@@ -7,9 +7,18 @@ Compares four sources of truth and fails loud the moment any two disagree:
   3. the latest version PyPI serves (`https://pypi.org/pypi/wave-sdk/json`)
   4. whether a GitHub Release exists for that tag (`gh api repos/<repo>/releases/tags/<tag>`)
 
-It also checks PyPI's PEP 740 attestation/provenance field
-(`urls[].provenance` in `https://pypi.org/pypi/wave-sdk/<version>/json`) for
-the latest published version, and fails if no file carries one.
+It also checks PyPI provenance/attestation coverage for the latest published
+version. The legacy `https://pypi.org/pypi/wave-sdk/<version>/json` API's
+`urls[].provenance` field is permanently null on PyPI now -- it was never
+populated for PEP 740 attestations and is not the live source of truth -- so
+this reads the PyPI Simple API instead (`https://pypi.org/simple/wave-sdk/`
+with `Accept: application/vnd.pypi.simple.v1+json`), which lists each file's
+`provenance` URL, and follows it to the PyPI Integrity API
+(`https://pypi.org/integrity/wave-sdk/<version>/<filename>/provenance`). A 200
+response carrying `attestation_bundles` means provenance is present for that
+file; a 404 (or a file with no `provenance` link at all) means it is
+genuinely absent -- that is a normal, meaningful DRIFT finding, not a read
+failure. Fails if no file carries provenance.
 
 Exit codes (checked by both workflows and safe to script against):
   0  everything agrees, release exists, attestation present
@@ -24,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import urllib.error
@@ -35,14 +45,15 @@ import tomllib
 PYPI_PROJECT = "wave-sdk"
 GITHUB_REPO = "wave-av/sdk-python"
 USER_AGENT = "wave-sdk-release-drift-check (+https://github.com/wave-av/sdk-python)"
+SIMPLE_INDEX_ACCEPT = "application/vnd.pypi.simple.v1+json"
 
 
 class UnreadableError(Exception):
     """A source could not be read at all (distinct from "read and disagrees")."""
 
 
-def _http_get_json(url: str) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+def _http_get_json(url: str, accept: str = "application/json") -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -50,6 +61,25 @@ def _http_get_json(url: str) -> dict:
         if exc.code == 404:
             raise
         raise UnreadableError(f"HTTP {exc.code} fetching {url}") from exc
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise UnreadableError(f"could not read {url}: {exc}") from exc
+
+
+def _http_get_json_allow_404(url: str, accept: str = "application/json") -> tuple[int, dict | None]:
+    """Like `_http_get_json` but a 404 is a normal, meaningful outcome (e.g. "no
+    provenance published for this file") rather than a read failure."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return 404, None
+        try:
+            body = exc.read()[:500].decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 -- best-effort diagnostic only
+            body = "<unreadable body>"
+        raise UnreadableError(f"HTTP {exc.code} fetching {url}: {body!r}") from exc
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise UnreadableError(f"could not read {url}: {exc}") from exc
 
@@ -65,17 +95,55 @@ def pypi_latest_version() -> str:
         raise UnreadableError("PyPI JSON response missing info.version") from exc
 
 
+def _files_for_version(files: list[dict], version: str) -> list[dict]:
+    """Filter the Simple API's flat `files[]` list (every version's every file,
+    for the whole project) down to the ones for `version`. Wheel/sdist
+    filenames embed the version as `<name>-<version>-...` or
+    `<name>-<version>.tar.gz`, so match on a version boundary rather than a
+    bare substring (avoids e.g. "2.2.0" matching "2.2.0rc1")."""
+    pattern = re.compile(r"-" + re.escape(version) + r"([-.]|$)")
+    return [f for f in files if pattern.search(f.get("filename", ""))]
+
+
 def pypi_attestations(version: str) -> tuple[bool, list[str]]:
-    """Return (any_attested, [filenames missing provenance])."""
+    """Return (any_attested, [filenames missing provenance]).
+
+    Reads the PyPI Simple API (not the legacy `.../<version>/json` API, whose
+    `urls[].provenance` field is always null) for the `provenance` link per
+    file, then confirms each link actually resolves to an attestation bundle
+    via the PyPI Integrity API. A file with no `provenance` link, or whose
+    link 404s, is reported as missing -- that is real information, not a read
+    failure.
+    """
     try:
-        data = _http_get_json(f"https://pypi.org/pypi/{PYPI_PROJECT}/{version}/json")
+        index = _http_get_json(
+            f"https://pypi.org/simple/{PYPI_PROJECT}/", accept=SIMPLE_INDEX_ACCEPT
+        )
     except urllib.error.HTTPError as exc:
-        raise UnreadableError(f"PyPI release page for {version} returned HTTP {exc.code}") from exc
-    urls = data.get("urls")
-    if not isinstance(urls, list) or not urls:
-        raise UnreadableError(f"PyPI release page for {version} has no urls[] to check for provenance")
-    missing = [u.get("filename", "<unknown>") for u in urls if not u.get("provenance")]
-    any_attested = any(u.get("provenance") for u in urls)
+        raise UnreadableError(f"PyPI Simple API for {PYPI_PROJECT} returned HTTP {exc.code}") from exc
+    files = index.get("files")
+    if not isinstance(files, list) or not files:
+        raise UnreadableError(f"PyPI Simple API for {PYPI_PROJECT} has no files[] to check for provenance")
+
+    version_files = _files_for_version(files, version)
+    if not version_files:
+        raise UnreadableError(
+            f"PyPI Simple API for {PYPI_PROJECT} lists no files matching version {version}"
+        )
+
+    missing: list[str] = []
+    any_attested = False
+    for f in version_files:
+        filename = f.get("filename", "<unknown>")
+        provenance_url = f.get("provenance")
+        if not provenance_url:
+            missing.append(filename)
+            continue
+        status, body = _http_get_json_allow_404(provenance_url)
+        if status == 404 or body is None or "attestation_bundles" not in body:
+            missing.append(filename)
+            continue
+        any_attested = True
     return any_attested, missing
 
 
@@ -176,7 +244,7 @@ def main() -> int:
         elif attested:
             print(f"[source] PyPI {pypi_v} attestations : PARTIAL, missing on {missing}")
         else:
-            print(f"[source] PyPI {pypi_v} attestations : NONE (urls[].provenance is null on every file)")
+            print(f"[source] PyPI {pypi_v} attestations : NONE (no file's Integrity API provenance link resolved)")
     except UnreadableError as exc:
         print(f"[UNREADABLE] PyPI attestation lookup: {exc}", file=sys.stderr)
         return 2

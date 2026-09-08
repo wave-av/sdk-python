@@ -54,6 +54,13 @@ jobs:
         id: evidence
         env:
           GA_EXPECT_VERSION: ${{ inputs.expect_version }}
+          # Read-only, job-scoped default token — raises the GitHub REST API's
+          # unauthenticated 60/hour-per-IP cap (shared across CI runners' NAT'd
+          # pools, and easy to exhaust) to 1000/hour. No new secret: this is
+          # `github.token`, already governed by the `permissions:` block above
+          # (contents: read), expires with the job, and is never logged.
+          # scripts/ga/ga_common.py attaches it ONLY to api.github.com requests.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           args=(--out-dir "$GITHUB_WORKSPACE/ga-out")

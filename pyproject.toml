@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wave-sdk"
-version = "2.1.0"
-description = "Official WAVE SDK for Python - 42 API modules for streaming, production, analytics, and more"
+version = "2.2.0"
+description = "Official WAVE SDK for Python - 43 API modules for streaming, production, analytics, and more"
 readme = "README.md"
 # Apache-2.0 is the repo's actual license: the LICENSE file is the Apache 2.0
 # text and NOTICE carves the WAVE marks out of that grant. This field said "MIT"

@@ -20,6 +20,7 @@ from wave_sdk.client import RateLimitError, WaveClient, WaveError, __version__
 # Existing P3 modules
 from wave_sdk.clips import ClipsAPI
 from wave_sdk.collab import CollabAPI
+from wave_sdk.compose import ComposeAPI
 from wave_sdk.connect import ConnectAPI
 from wave_sdk.creator import CreatorAPI
 from wave_sdk.desktop import DesktopAPI
@@ -96,6 +97,8 @@ __all__ = [
     "NotificationsAPI", "DrmAPI",
     # E5 comms productization + agentic surfaces (2.1.0 parity)
     "TranscriptAPI", "MailAPI", "MeterAPI", "PricingAPI", "PerceptionAPI", "InferenceAPI",
+    # PR4: the Composer rendering (POST /v1/compose)
+    "ComposeAPI",
     # x402 agent payments
     "sign_exact_authorization", "encode_exact_payment_header",
 ]
@@ -194,3 +197,7 @@ class Wave:
         # Perception — agentic live-media subscribe() control plane
         self.perception = PerceptionAPI(self.client)
         self.inference = InferenceAPI(self.client)
+
+        # Composer — POST /v1/compose: propose a plan across products for a
+        # plain-English intent (PR4). Never executes; a proposal is a plan.
+        self.compose = ComposeAPI(self.client)

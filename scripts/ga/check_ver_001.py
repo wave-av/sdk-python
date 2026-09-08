@@ -81,8 +81,12 @@ def run(repo: str, package: str, expect_version: str | None = None) -> Criterion
                 f"wheel METADATA Version {wheel_metadata} != PyPI info.version {pypi_version}",
             ))
 
-    # Newest v* tag and its GitHub release, via the public GitHub API (unauthenticated is fine —
-    # this reads public tag/release metadata, never the checkout).
+    # Newest v* tag and its GitHub release, via the public GitHub API. Reads public tag/release
+    # metadata, never the checkout. Sends `Authorization: Bearer $GITHUB_TOKEN` (or $GH_TOKEN)
+    # when set — see ga_common._headers_for — because the unauthenticated 60/hour rate limit is
+    # shared across a CI runner's NAT'd IP pool and gets exhausted in practice; a 403/429 here
+    # used to be swallowed into ga_evidence.py exit 2 ("could not run") instead of measuring
+    # anything.
     _, tags = fetch_json_allow_404(f"https://api.github.com/repos/{repo}/tags?per_page=100")
     tag_versions: list[tuple[tuple[int, int, int], str]] = []
     for t in (tags or []):
