@@ -26,12 +26,17 @@ name: release
 #   sbom    -- contents: read (no repo write -- only builds an artifact).
 #              Downloads the ACTUAL PUBLISHED wheel from PyPI by
 #              name==version (`pip download wave-sdk==<version>`, never a
-#              hand-built files.pythonhosted.org URL) so the SBOM always
-#              describes exactly what PyPI serves, not a possibly
-#              nondeterministic local rebuild; generates SPDX-JSON with
-#              anchore/sbom-action (wraps syft, pinned to a full commit SHA)
-#              and uploads it as a *workflow* artifact for `release` to pick
-#              up -- kept fully separate from `publish`'s id-token: write.
+#              hand-built files.pythonhosted.org URL), then INSTALLS that
+#              exact wheel plus its resolved runtime-dependency closure into
+#              an isolated `pip install --target` directory and generates
+#              SPDX-JSON from that INSTALLED tree with anchore/sbom-action
+#              (wraps syft, pinned to a full commit SHA). Scanning only the
+#              bare, never-installed wheel produced a one-entry SBOM with
+#              zero dependencies; the SBOM must enumerate what actually
+#              ships. Fails loud if wave-sdk or any unconditional declared
+#              runtime dependency is missing from the result. Uploads it as
+#              a *workflow* artifact for `release` to pick up -- kept fully
+#              separate from `publish`'s id-token: write.
 #   release -- contents: write only. Creates/updates the GitHub Release for
 #              the tag with the sdist+wheel AND the SBOM attached in the SAME
 #              `gh release create`/`upload` call, so a Release is never
@@ -319,13 +324,22 @@ jobs:
   # here as a build artifact, then attached by `release` (below) in the SAME
   # `gh release create`/`upload` call as dist/*, so a Release is never
   # visible without its SBOM (no window where the Release exists but the
-  # SBOM doesn't). Downloads the ACTUAL PUBLISHED wheel from PyPI by
+  # SBOM doesn't).
+  #
+  # Provenance: downloads the ACTUAL PUBLISHED wheel from PyPI by
   # name==version (never a hand-built files.pythonhosted.org URL;
   # --only-binary=:all: so a missing wheel fails loud instead of silently
   # SBOM-ing the sdist) rather than reusing `verify`'s locally built dist/
   # artifact: a rebuild is not guaranteed byte-identical to what PyPI
   # actually serves, and the SBOM must describe what ships, not what was
   # built pre-publish.
+  #
+  # Install-before-scan (defect fix): syft used to scan the directory holding
+  # that bare, never-installed wheel, so the SBOM had one entry and zero
+  # runtime dependencies -- and "packages[] is non-empty" waved it through.
+  # Now the wheel is INSTALLED (deps resolved from PyPI) into an isolated
+  # `pip install --target` tree, syft scans THAT, and validate_sbom.py fails
+  # loud unless wave-sdk and every unconditional Requires-Dist are present.
   # ---------------------------------------------------------------------------
   sbom:
     name: generate SBOM
@@ -339,7 +353,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Download the published wheel from PyPI (by name==version, never a direct URL)
+      - name: Download the published wheel from PyPI (by name==version, never a hand-built URL)
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
@@ -366,25 +380,58 @@ jobs:
           fi
           ls -la sbom-src
 
-      - name: Generate SPDX-JSON SBOM for the published wheel
+      - name: Install the published wheel + its runtime dependencies into an isolated target tree
+        run: |
+          set -euo pipefail
+          # Exactly one wheel must have been downloaded above -- refuse to guess otherwise.
+          # (Without nullglob an unmatched pattern stays literal; the -f test catches that.)
+          WHEELS=(sbom-src/*.whl)
+          if [ "${#WHEELS[@]}" -ne 1 ] || [ ! -f "${WHEELS[0]}" ]; then
+            echo "::error::expected exactly one .whl in sbom-src, found: ${WHEELS[*]}"
+            exit 1
+          fi
+          mkdir -p sbom-env
+          # Install the exact downloaded wheel FILE (not `wave-sdk==VERSION` again), so
+          # the bytes syft describes are the ones `pip download` fetched and listed above.
+          #   --target: a plain directory -- no venv bootstrap packages (pip/setuptools)
+          #             and no runner site-packages leak into the inventory.
+          #   --only-binary=:all:: dependencies must come as wheels; a dependency that
+          #             would need an sdist build (arbitrary setup.py execution) fails
+          #             loud here instead of running build scripts in the release job.
+          python -m pip install --no-cache-dir --only-binary=:all: --target sbom-env "${WHEELS[0]}"
+          echo "installed distributions:"
+          for d in sbom-env/*.dist-info; do basename "$d"; done
+
+      - name: Generate SPDX-JSON SBOM for the installed tree (published wheel + resolved runtime dependencies)
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
-          path: sbom-src
+          path: sbom-env
           format: spdx-json
           output-file: wave_sdk-${{ needs.verify.outputs.version }}.spdx.json
 
-      - name: Validate the SBOM has a non-empty packages[]
+      # See the matching step in `verify`/`publish`: release tooling is pinned
+      # to the workflow's own ref (github.sha), never to the tag being
+      # released, so a backfilled tag from before this script existed still
+      # finds it. The validator itself lives in scripts/release/ (unit-tested
+      # in tests/test_release_scripts.py) rather than inlined here.
+      - name: Check out release tooling from the workflow's own ref
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: scripts/release
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+          path: .release-tooling
+
+      # Fail loud unless wave-sdk AND every unconditional runtime dependency
+      # from the installed wheel's own Requires-Dist appear in packages[] with
+      # a real version. The old "packages[] is non-empty" check passed on the
+      # single self-describing entry the uninstalled scan produced.
+      - name: Validate the SBOM enumerates wave-sdk and every declared runtime dependency
         env:
           FILE: wave_sdk-${{ needs.verify.outputs.version }}.spdx.json
-        run: |
-          set -euo pipefail
-          test -s "$FILE" || { echo "::error::${FILE} is missing or empty"; exit 1; }
-          python3 -c "
-          import json, os
-          d = json.load(open(os.environ['FILE']))
-          assert d.get('packages'), 'SBOM has no packages[]'
-          print('SBOM OK:', d.get('spdxVersion'), '-', len(d['packages']), 'package(s)')
-          "
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: python3 .release-tooling/scripts/release/validate_sbom.py "$FILE" --target sbom-env --version "$VERSION"
 
       - name: Upload SBOM as a workflow artifact (for the release job to attach)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
