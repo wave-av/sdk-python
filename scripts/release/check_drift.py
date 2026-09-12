@@ -26,8 +26,9 @@ Exit codes (checked by both workflows and safe to script against):
   2  a source was unreadable (network error, bad JSON, git/gh failure) --
      an unreadable registry is NEVER treated as "in sync"
 
-Stdlib + `git`/`gh` CLI only. No third-party imports so this runs identically
-in CI and on a laptop with nothing but Python 3.11+ and the GitHub CLI.
+Stdlib + `git`/`gh` CLI only (plus `tomli` as a dev dependency below Python 3.11, where `tomllib`
+isn't stdlib yet) so this runs identically in CI and on a laptop with the GitHub CLI, across the
+full `requires-python = ">=3.9"` matrix this package supports.
 """
 from __future__ import annotations
 
@@ -40,7 +41,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-import tomllib
+try:  # tomllib is stdlib from 3.11; `tomli` is a dev dependency below that (see pyproject.toml).
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 PYPI_PROJECT = "wave-sdk"
 GITHUB_REPO = "wave-av/sdk-python"
