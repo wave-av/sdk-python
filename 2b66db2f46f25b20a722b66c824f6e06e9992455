@@ -1,0 +1,23 @@
+tests/test_packaging.py
+  s_418f585ff58cb5::t_0e2a026f6d1c82 197-199
+  s_418f585ff58cb5::t_7a6289439798a9 1-98,100-196,200-201
+  s_418f585ff58cb5::t_912a7ae4645066 99
+.github/workflows/python-tests.yml
+  s_418f585ff58cb5::t_1216db60ce682c 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "2b66db2f46f25b20a722b66c824f6e06e9992455",
+  "prompts": {},
+  "sessions": {
+    "s_418f585ff58cb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e5b410ce-aa9a-48d6-be5d-09400395b1b6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
