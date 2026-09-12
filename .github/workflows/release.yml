@@ -266,11 +266,32 @@ jobs:
   publish:
     name: publish to PyPI
     needs: [resolve-ref, verify]
+    # Ref floor for the one job that mints a publishing credential.
+    # `resolve-ref` proves the TAG is v<semver>, exists, and is an ancestor of
+    # origin/main -- so the CODE published is always merged code. It says
+    # nothing about the RUN's own ref, which is what lands in the OIDC token's
+    # `ref` claim and scopes this run's Actions cache: a dispatch from an
+    # arbitrary branch would still reach PyPI under that branch's identity.
+    # So: a v* tag push, a published release, or a dispatch from the default
+    # branch (the documented backfill path, already ancestry-anchored) -- and
+    # nothing else. A missing `default_branch` makes `format(...)` yield
+    # `refs/heads/`, matching no real ref, so the guard fails CLOSED.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v')
+      || github.event_name == 'release'
+      || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Named environment on the publish job ONLY. It anchors two things this
+    # workflow cannot grant itself: the `environment:pypi` claim the
+    # registry-side trusted publisher is pinned to, and an environment
+    # protection rule (required reviewer + tag-only deployment policy) gating
+    # the mint. Configuring that environment is an operator act, not this file.
     environment:
       name: pypi
       url: https://pypi.org/project/wave-sdk/
+    # `id-token: write` lives here and NOWHERE else; the workflow-level default
+    # stays `contents: read`. Do not hoist this to the workflow level.
     permissions:
       id-token: write
       contents: read
