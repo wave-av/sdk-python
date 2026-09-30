@@ -23,6 +23,7 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+import pydantic
 import pytest
 
 from tests.conftest import Recorder, attach
@@ -198,8 +199,11 @@ def _send(monkeypatch: pytest.MonkeyPatch, namespace: str, method: str, args: tu
         warnings.simplefilter("error", DeprecationWarning)
         try:
             call(*args, **kwargs)
-        except (ValueError, TypeError, KeyError, AttributeError) as exc:
-            # The mock answers `{}`; a response model may reject it after the request was sent.
+        except pydantic.ValidationError as exc:
+            # The mock answers `{}`, and a typed response model rejects that after the request was
+            # sent. That is the only exception tolerated, and only once a request went out: any
+            # other exception (a TypeError or AttributeError in response handling, a WaveError)
+            # propagates and fails the test.
             if not recorder.requests and not upgrades:
                 raise AssertionError(f"{namespace}.{method} raised before sending: {exc!r}") from exc
 
@@ -210,6 +214,34 @@ def _send(monkeypatch: pytest.MonkeyPatch, namespace: str, method: str, args: tu
     assert len(recorder.requests) == 1, f"{namespace}.{method} sent {len(recorder.requests)} requests"
     req = recorder.last
     return req.method, req.url.path
+
+
+def test_send_fails_when_the_method_raises_before_sending(monkeypatch: pytest.MonkeyPatch):
+    """The harness itself must not turn a method that never reaches the wire into a pass."""
+    def broken(self: Any, *_a: Any, **_k: Any) -> None:
+        raise TypeError("bad argument handling")
+
+    monkeypatch.setattr("wave_sdk.usage.UsageAPI.get", broken)
+    with pytest.raises(TypeError, match="bad argument handling"):
+        _send(monkeypatch, "usage", "get", (), {})
+
+
+def test_send_fails_when_response_handling_breaks_after_sending(monkeypatch: pytest.MonkeyPatch):
+    """Only a response model rejecting the mock's `{}` is tolerated after the send. A bug in
+    response handling (here an AttributeError) must fail the contract test, not pass it."""
+    def sends_then_breaks(self: Any, *_a: Any, **_k: Any) -> None:
+        self._client.get("/v1/usage")
+        raise AttributeError("response handling bug")
+
+    monkeypatch.setattr("wave_sdk.usage.UsageAPI.get", sends_then_breaks)
+    with pytest.raises(AttributeError, match="response handling bug"):
+        _send(monkeypatch, "usage", "get", (), {})
+
+
+def test_send_tolerates_only_a_model_rejecting_the_empty_mock_body(monkeypatch: pytest.MonkeyPatch):
+    """The real GET /v1/usage call parses `{}` into UsageReport, which rejects it after sending;
+    the harness still returns the request it sent."""
+    assert _send(monkeypatch, "usage", "get", (), {}) == ("GET", "/v1/usage")
 
 
 def test_snapshot_is_sane():
