@@ -1,0 +1,25 @@
+.github/workflows/release-drift.yml
+  s_0f82e1ac3c1571::t_ebab0f6fea3a14 56-83
+scripts/refresh_openapi_snapshot.py
+  s_0f82e1ac3c1571::t_a2574b593dced3 1-63
+tests/fixtures/openapi_snapshot.json
+  s_0f82e1ac3c1571::t_2d9b06b4873f2b 2-1541
+tests/test_contract_coverage.py
+  s_0f82e1ac3c1571::t_c84262f86f0ae5 1-14,19-22,24-28,31,34,38-45,48-113,116,118-163,166-167,170-172,174-175,177-179,182-190,192-219,221-251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "cda5a7aefd1792f1a0b9e7111ea13743d870f0d1",
+  "prompts": {},
+  "sessions": {
+    "s_0f82e1ac3c1571": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a69f51d96d67e91b6",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
