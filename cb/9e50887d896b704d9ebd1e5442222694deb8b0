@@ -1,0 +1,86 @@
+wave_sdk/editor.py
+  s_13ccc7d9001218::t_3e26d4bf3e38f5 53
+  s_13ccc7d9001218::t_bbd48fe01eff74 7
+  s_13ccc7d9001218::t_7043f94248bcaf 5-6
+  s_13ccc7d9001218::t_3c6881af4420ef 50-52
+  s_13ccc7d9001218::t_c062a24f593974 54-56
+  s_13ccc7d9001218::t_7419da7eb204e0 57-58
+tests/test_served_routes.py
+  s_13ccc7d9001218::t_c26e91a6b5c434 182,218-235
+  s_13ccc7d9001218::t_48c738435756c5 179-181
+  s_13ccc7d9001218::t_65c03a64c5bdb8 183-185,215-217
+  s_13ccc7d9001218::t_0fa05d073e0bc5 236-238
+  s_13ccc7d9001218::t_722fc42ad1905d 1-178,186-214,239-245
+wave_sdk/collab.py
+  s_13ccc7d9001218::t_e3ae0b9cca9391 6
+  s_13ccc7d9001218::t_9a04ea6ed1cca5 33
+  s_13ccc7d9001218::t_18f0e4d2730f4e 31-32
+  s_13ccc7d9001218::t_8cfd8ea238ae1d 34-36
+  s_13ccc7d9001218::t_70179ed852d4d0 4,37-38
+wave_sdk/captions.py
+  s_13ccc7d9001218::t_5e99513e9c076a 43
+  s_13ccc7d9001218::t_a6b60455f86be3 7
+  s_13ccc7d9001218::t_8adceee3d7805b 5-6
+  s_13ccc7d9001218::t_215d018710483d 40-42
+  s_13ccc7d9001218::t_c9ed41a454fccd 44-46
+  s_13ccc7d9001218::t_1ab3b9737b306e 38-39,47-48
+wave_sdk/usage.py
+  s_13ccc7d9001218::t_3bda8eca26d3fb 36-39
+  s_13ccc7d9001218::t_88419c913947a3 33-35
+  s_13ccc7d9001218::t_fe8e316ba7dce1 40-42
+  s_13ccc7d9001218::t_85b7bfbb21b696 1-32,43-57
+tests/conftest.py
+  s_13ccc7d9001218::t_fd6e853960c464 2-8,11-14,25-83
+tests/fixtures/live_responses.json
+  s_13ccc7d9001218::t_1a321611ed5502 1-410
+tests/test_errors.py
+  s_13ccc7d9001218::t_d4b79e64957365 1-183
+tests/test_parity_apis.py
+  s_13ccc7d9001218::t_8e4793736e69e4 115,117,123-124,215-226,232-242,247-248,251-252,258-266,269,273-276
+tests/test_realtime.py
+  s_13ccc7d9001218::t_c42ccd468eead3 1-166
+tests/test_sdk_exports.py
+  s_13ccc7d9001218::t_4cafb539ce0a5f 67-73,77-78,150-152,156
+wave_sdk/__init__.py
+  s_13ccc7d9001218::t_5b30b8ef8d11f3 10-11,18,31,66,82-83,106-107,120-122,210-212
+wave_sdk/chapters.py
+  s_13ccc7d9001218::t_a44b2e032b8603 1-6,10,12,19-23,39-65
+wave_sdk/client.py
+  s_13ccc7d9001218::t_76ce619dd6ae91 10,17-37,47-48,68,177,180-185,208-209,215,217-221,228-234,240-241,264-268,270-278
+wave_sdk/clips.py
+  s_13ccc7d9001218::t_3c4eeb9170ab09 10-11,84,260-285,294-300
+wave_sdk/errors.py
+  s_13ccc7d9001218::t_0413ea4bbf6882 1-246
+wave_sdk/inference.py
+  s_13ccc7d9001218::t_5b561cb232925a 1-11,15,19,23-25,40-43,45-49,78-82,86-93,98,100-105,116-119,122-129,150-160,163
+wave_sdk/mesh.py
+  s_13ccc7d9001218::t_ad145094dacdc9 1-12,21-22,31-65
+wave_sdk/meter.py
+  s_13ccc7d9001218::t_91146436b2feea 1-2,6-9,13,19-26,29-30,33-34,37-38,41-42,45-46,49-52,54-56,61,64-65,68-69,72-73,77,90
+wave_sdk/podcast.py
+  s_13ccc7d9001218::t_6752d2a907410e 1-8,12,14,18-41,43-58,62-94
+wave_sdk/pulse.py
+  s_13ccc7d9001218::t_6bbdd269e7012a 1-10,18-21,24-35
+wave_sdk/realtime.py
+  s_13ccc7d9001218::t_206abd225db5a0 3-12,15-18,26,30,32-34,37-43,47-73,84-91,99-102,104-117,120,162,164-169,171-174,177-181,183-186,188,190-193,195-198,200
+wave_sdk/sentiment.py
+  s_13ccc7d9001218::t_574c622bd380f9 18-22
+wave_sdk/voice.py
+  s_13ccc7d9001218::t_fc6440e4894369 5,8,31-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "cb9e50887d896b704d9ebd1e5442222694deb8b0",
+  "prompts": {},
+  "sessions": {
+    "s_13ccc7d9001218": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11229abc-f617-4541-b5d7-d693c6ae4d9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
