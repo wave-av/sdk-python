@@ -1,0 +1,26 @@
+CHANGELOG.md
+  s_13ccc7d9001218::t_e1c85eb79419d3 63-64
+README.md
+  s_13ccc7d9001218::t_977bef3840d42b 148-149
+wave_sdk/mesh.py
+  s_13ccc7d9001218::t_d99b65e8ad8da4 8-9
+  s_13ccc7d9001218::t_0afcc147d48b98 49-53,55
+tests/test_mesh.py
+  s_13ccc7d9001218::t_6d1c7675e97084 99-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "5d8b6a8d7188ff8a61f8bae282aa02195ca4cb91",
+  "prompts": {},
+  "sessions": {
+    "s_13ccc7d9001218": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11229abc-f617-4541-b5d7-d693c6ae4d9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
