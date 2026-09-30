@@ -1,3 +1,34 @@
+# Migrating to `wave-sdk` 2.3.0
+
+2.3.0 moves methods onto the paths the WAVE API publishes. Old names keep working and emit a
+`DeprecationWarning`, so nothing breaks on upgrade; switch when convenient.
+
+| Before (2.2.0)                                  | 2.3.0                                                     |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| `clips.detect_highlights(source_type, source_id)` | `clips.detect(video_id)` (`POST /v1/clips/detect`)      |
+| `voice.synthesize(text, voice_id)`              | `voice.generate(text, voice_id)` (`POST /v1/voice/generate`) |
+| `captions.get_text(caption_id)`                 | `captions.download(job_id, language, format="txt")`       |
+| `chapters.get_default_set(asset_id)`            | `chapters.list_chapters(video_id)`                        |
+| `chapters.add_chapter(set_id, ...)`             | `chapters.create_chapter(video_id, ...)`                  |
+| `editor.render(project_id)`                     | `editor.export(project_id)`                               |
+| `collab.close_room(room_id)`                    | `collab.delete_room(room_id)`                             |
+| `inference.profile(model_id)`                   | `inference.models()`                                      |
+| `InferenceAPI(client, funnel_url=...)`          | `InferenceAPI(client)`: completions go through `api.wave.online` |
+
+Three changes can affect existing code:
+
+- `podcast.create(title, description, category)` is now `podcast.create(name, description=None,
+  category=None, ...)`, and `podcast.create_episode()` requires `audio_url=`. Positional calls
+  keep working; rename a `title=` keyword to `name=`. The old `/v1/podcasts` paths were never
+  routed, so no call that worked before changes behavior.
+- `meter.ledger()` returns one window: read `ledger.channels` instead of `ledger.rows[0].channels`.
+- A 402 now raises `PaymentRequiredError`, and a 404 for a route nothing serves (or a 405) raises
+  `RouteNotServedError`. Errors whose body the old parser could not read, which surfaced as
+  `code="HTTP_402"` or `"HTTP_405"`, now carry the server's code and message. Both classes
+  subclass `WaveError`, so existing `except WaveError` blocks still catch them.
+
+---
+
 # Migrating to `wave-sdk` 2.1.0
 
 Two things changed between the published `2.0.0` releases and `2.1.0`: the

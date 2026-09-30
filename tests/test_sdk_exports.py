@@ -181,9 +181,9 @@ def test_studio_has_methods():
 
 
 def test_version():
-    """SDK version should be 2.2.0."""
+    """SDK version should be 2.3.0."""
     import wave_sdk
-    assert wave_sdk.__version__ == "2.2.0"
+    assert wave_sdk.__version__ == "2.3.0"
 
 
 def test_all_exports():
