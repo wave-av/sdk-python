@@ -112,16 +112,16 @@ def _channels():
 
 
 def test_meter_ledger(mock_client):
+    # The ledger is one metering window with per-channel counters (not a list of rows).
     mock_client.get.return_value = {
-        "rows": [{"org": "acme", "from": "2026-08-01", "to": "2026-08-31", "channels": _channels()}],
+        "org": "acme", "from": "2026-08-01", "to": "2026-08-31", "channels": _channels(),
         "generated_at": "2026-09-01T00:00:00Z",
     }
     api = MeterAPI(mock_client)
     result = api.ledger(channel="mail")
     mock_client.get.assert_called_once_with("/v1/meter/ledger", params={"channel": "mail"})
-    assert len(result.rows) == 1
-    assert result.rows[0].from_ == "2026-08-01"
-    assert result.rows[0].channels.mail.ops == 10
+    assert result.from_ == "2026-08-01"
+    assert result.channels.mail.ops == 10
 
 
 def test_meter_rollup(mock_client):
@@ -212,60 +212,65 @@ def test_perception_unsubscribe(mock_client):
 # InferenceAPI
 # ---------------------------------------------------------------------------
 
-def test_inference_complete(monkeypatch):
-    class FakeClient:
-        api_key = "test-key"
-
-    def fake_post(url, headers=None, json=None, timeout=None):
-        assert url == "https://inference.wave.online/v1/chat/completions"
-        assert headers["authorization"] == "Bearer test-key"
-        return httpx.Response(200, json={
-            "model": "claude-haiku", "choices": [{"message": {"content": "hi there"}}],
-            "usage": {"cost": 0.0001, "total_tokens": 12},
-        })
-
-    monkeypatch.setattr("wave_sdk.inference.httpx.post", fake_post)
-    api = InferenceAPI(FakeClient())
-    result = api.complete("claude-haiku", [{"role": "user", "content": "hi"}])
+def test_inference_complete_goes_through_the_gateway(mock_client):
+    mock_client.post.return_value = {
+        "model": "claude-haiku", "choices": [{"message": {"content": "hi there"}}],
+        "usage": {"cost": 0.0001, "total_tokens": 12},
+    }
+    api = InferenceAPI(mock_client)
+    result = api.complete("claude-haiku", [{"role": "user", "content": "hi"}], max_tokens=5)
+    mock_client.post.assert_called_once_with(
+        "/v1/inference/chat/completions",
+        json={"model": "claude-haiku", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5},
+        timeout=120.0,
+    )
     assert result.model == "claude-haiku"
     assert result.content == "hi there"
     assert result.total_tokens == 12
 
 
-def test_inference_complete_raises_on_error(monkeypatch):
+def test_inference_complete_never_leaves_the_gateway(monkeypatch, mock_client):
+    """The default path must not post to any other host with the WAVE key."""
+    def boom(*_a, **_k):
+        raise AssertionError("complete() made a direct httpx.post call")
+
+    monkeypatch.setattr("wave_sdk.inference.httpx.post", boom)
+    mock_client.post.return_value = {"choices": [{"message": {"content": "x"}}]}
+    InferenceAPI(mock_client).complete("m", [{"role": "user", "content": "hi"}])
+
+
+def test_inference_legacy_funnel_url_is_deprecated(monkeypatch):
     class FakeClient:
         api_key = "test-key"
 
     def fake_post(url, headers=None, json=None, timeout=None):
-        return httpx.Response(500, text="funnel down")
+        assert url == "https://funnel.example.com/v1/chat/completions"
+        return httpx.Response(500, text="down")
 
     monkeypatch.setattr("wave_sdk.inference.httpx.post", fake_post)
-    api = InferenceAPI(FakeClient())
+    with pytest.warns(DeprecationWarning, match="funnel_url"):
+        api = InferenceAPI(FakeClient(), funnel_url="https://funnel.example.com")
     from wave_sdk.client import WaveError
     with pytest.raises(WaveError):
         api.complete("claude-haiku", [{"role": "user", "content": "hi"}])
 
 
-def test_inference_models_requires_registry():
+def test_inference_models_reads_the_gateway_list(mock_client):
+    mock_client.get.return_value = {
+        "object": "list",
+        "data": [{"id": "model-a", "object": "model", "owned_by": "wave"}, {"id": "model-b", "object": "model"}],
+    }
+    models = InferenceAPI(mock_client).models()
+    mock_client.get.assert_called_once_with("/v1/inference/models")
+    assert [m.id for m in models] == ["model-a", "model-b"]
+    assert models[0].owned_by == "wave"
+
+
+def test_inference_profile_requires_registry_and_is_deprecated():
     class FakeClient:
         api_key = "test-key"
 
     api = InferenceAPI(FakeClient())
     from wave_sdk.client import WaveError
-    with pytest.raises(WaveError, match="registry_url"):
-        api.models()
-
-
-def test_inference_models_with_registry(monkeypatch):
-    class FakeClient:
-        api_key = "test-key"
-
-    def fake_get(url, headers=None, timeout=None):
-        assert url.startswith("https://registry.example.com/rest/v1/models")
-        return httpx.Response(200, json=[{"id": "m1", "rail": "openai", "cost_input_per_m": 1.0, "cost_output_per_m": 2.0}])
-
-    monkeypatch.setattr("wave_sdk.inference.httpx.get", fake_get)
-    api = InferenceAPI(FakeClient(), registry_url="https://registry.example.com", registry_key="k")
-    models = api.models()
-    assert models[0].id == "m1"
-    assert models[0].input_per_m == 1.0
+    with pytest.warns(DeprecationWarning), pytest.raises(WaveError, match="registry_url"):
+        api.profile("m1")

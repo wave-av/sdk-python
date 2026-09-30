@@ -1,7 +1,9 @@
 """WAVE SDK - Collab API. Real-time collaboration rooms, participants, comments, and annotations."""
 from __future__ import annotations
 
+import warnings
 from typing import Any
+from urllib.parse import quote
 
 from pydantic import BaseModel
 
@@ -26,7 +28,14 @@ class CollabAPI:
     def get_room(self, room_id: str) -> CollabRoom: return CollabRoom(**self._client.get(f"{self._base}/rooms/{room_id}"))
     def update_room(self, room_id: str, **kwargs: Any) -> CollabRoom: return CollabRoom(**self._client.patch(f"{self._base}/rooms/{room_id}", json=kwargs))
     def list_rooms(self, **params: Any) -> dict: return self._client.get(f"{self._base}/rooms", params={k: v for k, v in params.items() if v is not None})
-    def close_room(self, room_id: str) -> None: self._client.post(f"{self._base}/rooms/{room_id}/close")
+    def delete_room(self, room_id: str) -> None:
+        """Close and delete a room. ``DELETE /v1/collab/rooms/{roomId}``."""
+        self._client.delete(f"{self._base}/rooms/{quote(room_id, safe=':')}")
+    def close_room(self, room_id: str) -> None:
+        """Deprecated alias of :meth:`delete_room` (it used to send ``POST .../close``, which is not a
+        published API operation)."""
+        warnings.warn("collab.close_room() is deprecated; use collab.delete_room(room_id)", DeprecationWarning, stacklevel=2)
+        self.delete_room(room_id)
     def archive_room(self, room_id: str) -> None: self._client.post(f"{self._base}/rooms/{room_id}/archive")
     def get_join_token(self, room_id: str) -> dict: return self._client.post(f"{self._base}/rooms/{room_id}/join-token")
     def invite(self, room_id: str, user_ids: list[str], role: str = "viewer") -> None: self._client.post(f"{self._base}/rooms/{room_id}/invite", json={"user_ids": user_ids, "role": role})

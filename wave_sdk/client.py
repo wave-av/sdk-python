@@ -7,11 +7,33 @@ Core HTTP client with authentication, rate limiting, and retry logic.
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import Any, Generic, TypeVar
 
 import httpx
 from pydantic import BaseModel
+
+# Error types live in wave_sdk.errors; they are re-exported here so existing
+# `from wave_sdk.client import WaveError` imports keep working.
+from wave_sdk.errors import (
+    PaymentRequiredError,
+    RateLimitError,
+    RouteNotServedError,
+    WaveError,
+    error_from_response,
+)
+
+__all__ = [
+    "PaginatedResponse",
+    "PaymentRequiredError",
+    "RateLimitError",
+    "RouteNotServedError",
+    "WaveClient",
+    "WaveError",
+    "__version__",
+    "error_from_response",
+]
 
 logger = logging.getLogger("wave_sdk")
 
@@ -22,48 +44,8 @@ __version__ = "2.2.0"
 
 T = TypeVar("T")
 
-
-class WaveError(Exception):
-    """WAVE API error."""
-
-    def __init__(
-        self,
-        message: str,
-        code: str,
-        status_code: int,
-        request_id: str | None = None,
-        details: dict[str, Any] | None = None,
-    ):
-        super().__init__(message)
-        self.message = message
-        self.code = code
-        self.status_code = status_code
-        self.request_id = request_id
-        self.details = details
-        self.retryable = self._is_retryable(status_code, code)
-
-    def _is_retryable(self, status_code: int, code: str) -> bool:
-        if status_code == 429:
-            return True
-        if 500 <= status_code < 600:
-            return True
-        return code in ("TIMEOUT", "NETWORK_ERROR", "SERVICE_UNAVAILABLE")
-
-    def __str__(self) -> str:
-        return f"WaveError({self.code}): {self.message}"
-
-
-class RateLimitError(WaveError):
-    """Rate limit exceeded error."""
-
-    def __init__(
-        self,
-        message: str,
-        retry_after: float,
-        request_id: str | None = None,
-    ):
-        super().__init__(message, "RATE_LIMITED", 429, request_id)
-        self.retry_after = retry_after
+# Longest server-suggested wait the client honours before retrying on its own.
+_MAX_SERVER_RETRY_AFTER = 60.0
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -83,7 +65,7 @@ class WaveClient:
 
     Example:
         >>> client = WaveClient(api_key="your-api-key")
-        >>> response = client.get("/v1/clips")
+        >>> usage = client.get("/v1/usage")
     """
 
     def __init__(
@@ -192,9 +174,15 @@ class WaveClient:
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         no_retry: bool = False,
+        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
-        """Make an API request with retry logic."""
+        """Make an API request with retry logic.
+
+        Returns the decoded JSON body, or ``None`` for a non-JSON success. With ``raw=True`` the
+        successful ``httpx.Response`` itself is returned, for routes that answer with bytes (audio,
+        caption files); errors still raise :class:`WaveError` exactly as on the JSON path.
+        """
         # Filter out None params
         if params:
             params = {k: v for k, v in params.items() if v is not None}
@@ -217,28 +205,40 @@ class WaveClient:
 
                 # Handle rate limiting
                 if response.status_code == 429:
-                    retry_after = self._parse_retry_after(response)
+                    parsed = self._parse_error(response)
+                    retry_after = self._parse_retry_after(response, parsed)
                     if attempt < max_retries:
                         logger.warning(f"Rate limited. Retrying in {retry_after}s")
                         time.sleep(retry_after)
                         continue
                     raise RateLimitError(
-                        "Rate limit exceeded",
+                        parsed.message if parsed.code != "HTTP_429" else "Rate limit exceeded",
                         retry_after,
-                        response.headers.get("x-request-id"),
+                        parsed.request_id,
+                        details=parsed.details,
+                        next_action=parsed.next_action,
+                        suggestions=parsed.suggestions,
+                        doc_url=parsed.doc_url,
                     )
 
                 # Handle errors
                 if not response.is_success:
                     error = self._parse_error(response)
                     if error.retryable and attempt < max_retries:
-                        delay = self._calculate_backoff(attempt)
-                        logger.warning(f"Request failed. Retrying in {delay}s")
+                        hint = error.retry_after_hint
+                        delay = (
+                            min(hint, _MAX_SERVER_RETRY_AFTER)
+                            if hint is not None
+                            else self._calculate_backoff(attempt)
+                        )
+                        logger.warning(f"Request failed ({error.code}). Retrying in {delay}s")
                         time.sleep(delay)
                         continue
                     raise error
 
                 # Parse response
+                if raw:
+                    return response
                 if response.headers.get("content-type", "").startswith("application/json"):
                     return response.json()
                 return None
@@ -261,34 +261,21 @@ class WaveClient:
         raise WaveError("Request failed after retries", "UNKNOWN_ERROR", 0)
 
     def _parse_error(self, response: httpx.Response) -> WaveError:
-        """Parse error response."""
-        request_id = response.headers.get("x-request-id")
-        try:
-            body = response.json()
-            return WaveError(
-                body.get("error", {}).get("message", f"HTTP {response.status_code}"),
-                body.get("error", {}).get("code", f"HTTP_{response.status_code}"),
-                response.status_code,
-                request_id or body.get("request_id"),
-                body.get("error", {}).get("details"),
-            )
-        except Exception:
-            return WaveError(
-                f"HTTP {response.status_code}: {response.reason_phrase}",
-                f"HTTP_{response.status_code}",
-                response.status_code,
-                request_id,
-            )
+        """Parse an error response into the most specific WaveError subclass."""
+        return error_from_response(response)
 
-    def _parse_retry_after(self, response: httpx.Response) -> float:
-        """Parse Retry-After header."""
+    def _parse_retry_after(self, response: httpx.Response, error: WaveError | None = None) -> float:
+        """Seconds to wait: the Retry-After header, else the body's retry_after directive, else 1s."""
         retry_after = response.headers.get("retry-after")
-        if not retry_after:
-            return 1.0
-        try:
-            return float(retry_after)
-        except ValueError:
-            return 1.0
+        if retry_after:
+            try:
+                return float(retry_after)
+            except ValueError:
+                pass
+        hint = error.retry_after_hint if error is not None else None
+        if hint is not None:
+            return min(hint, _MAX_SERVER_RETRY_AFTER)
+        return 1.0
 
     def _calculate_backoff(self, attempt: int) -> float:
         """Calculate exponential backoff delay."""
@@ -296,8 +283,6 @@ class WaveClient:
         max_delay = 30.0
         delay = min(base_delay * (2**attempt), max_delay)
         # Add jitter
-        import random
-
         return delay + random.random() * delay * 0.25
 
     def close(self) -> None:

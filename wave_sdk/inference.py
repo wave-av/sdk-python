@@ -1,23 +1,27 @@
-"""WAVE SDK - Inference API (the funnel rendering). One OpenAI-compatible
-completion endpoint fronting the WAVE model registry - measured routing,
-automatic failover, per-token metering. The SDK forwards the API key; auth,
-budgets, guardrails, and spend tracking are enforced by the funnel plane
-(inference.wave.online).
+"""WAVE SDK - Inference API. One OpenAI-compatible completion endpoint fronting the WAVE model
+registry: measured routing, automatic failover, per-token metering.
 
-The routing decision is measured: every model carries a floor-to-ceiling
-transition profile in the registry. `profile()` returns it alongside live
-usage. Reading the registry directly (`models`, `profile`) requires the
-caller to supply the registry's own read endpoint and key - the WAVE API key
-alone is not a registry credential.
+Both calls go through the API gateway with your WAVE API key, like every other namespace:
+
+* ``complete()`` -> ``POST /v1/inference/chat/completions`` (scope ``dispatch:write``);
+* ``models()``   -> ``GET /v1/inference/models`` (an OpenAI-style model list).
+
+``profile()`` reads the model registry directly and needs the registry's own endpoint and key
+(``registry_url`` / ``registry_key``); the WAVE API key is not a registry credential. It is
+deprecated and will be removed in a future major release.
 """
 from __future__ import annotations
 
+import warnings
 from typing import Any, Literal
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from wave_sdk.client import WaveClient, WaveError
+
+_COMPLETIONS_PATH = "/v1/inference/chat/completions"
+_MODELS_PATH = "/v1/inference/models"
 
 
 class InferenceMessage(BaseModel):
@@ -33,10 +37,16 @@ class InferenceResult(BaseModel):
 
 
 class InferenceModel(BaseModel):
+    """One entry of ``GET /v1/inference/models``. ``rail`` and the per-token prices are only filled
+    by the deprecated registry read; the gateway list carries ``id``, ``object`` and ``owned_by``."""
+
+    model_config = ConfigDict(extra="allow")
     id: str
-    rail: str
-    input_per_m: float | None
-    output_per_m: float | None
+    object: str | None = None
+    owned_by: str | None = None
+    rail: str | None = None
+    input_per_m: float | None = None
+    output_per_m: float | None = None
 
 
 class ModelTransition(BaseModel):
@@ -65,27 +75,34 @@ class ModelProfile(BaseModel):
 
 
 class InferenceAPI:
-    """Inference API - one completion call through the measured funnel, plus
-    registry reads (model catalog, measured profile)."""
+    """Inference API - one completion call through the gateway, plus the model list.
+
+    ``funnel_url`` is deprecated: it posts completions straight to a proxy that does not accept
+    WAVE API keys. Leave it unset to go through ``https://api.wave.online``.
+    """
 
     def __init__(self, client: WaveClient, funnel_url: str | None = None, registry_url: str | None = None, registry_key: str | None = None):
         self._client = client
-        self._funnel_url = (funnel_url or "https://inference.wave.online").rstrip("/")
+        if funnel_url is not None:
+            warnings.warn(
+                "InferenceAPI(funnel_url=...) is deprecated: completions go through the API gateway "
+                f"({_COMPLETIONS_PATH}), which accepts your WAVE API key. Leave funnel_url unset.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._funnel_url = funnel_url.rstrip("/") if funnel_url else None
         self._registry_url = (registry_url or "").rstrip("/")
         self._registry_key = registry_key or ""
 
     def complete(self, model: str, messages: list[InferenceMessage | dict[str, Any]], max_tokens: int = 1024) -> InferenceResult:
-        """One completion through the measured funnel. Raises WaveError on HTTP errors."""
+        """One completion. ``POST /v1/inference/chat/completions``; raises WaveError on HTTP errors."""
         msgs = [m.model_dump() if isinstance(m, InferenceMessage) else m for m in messages]
-        response = httpx.post(
-            f"{self._funnel_url}/v1/chat/completions",
-            headers={"content-type": "application/json", "authorization": f"Bearer {self._client.api_key}"},
-            json={"model": model, "messages": msgs, "max_tokens": max_tokens},
-            timeout=120.0,
-        )
-        if not response.is_success:
-            raise WaveError(f"inference {response.status_code}: {response.text[:300]}", "INFERENCE_ERROR", response.status_code)
-        data = response.json()
+        body = {"model": model, "messages": msgs, "max_tokens": max_tokens}
+        if self._funnel_url:
+            data = self._legacy_funnel_post(body)
+        else:
+            data = self._client.post(_COMPLETIONS_PATH, json=body, timeout=120.0)
+        data = data if isinstance(data, dict) else {}
         usage = data.get("usage") or {}
         choices = data.get("choices") or [{}]
         return InferenceResult(
@@ -96,12 +113,20 @@ class InferenceAPI:
         )
 
     def models(self) -> list[InferenceModel]:
-        """Models admitted to the registry with their per-token pricing."""
-        rows = self._registry_get("/rest/v1/models?select=id,rail,cost_input_per_m,cost_output_per_m&limit=1000")
-        return [InferenceModel(id=r["id"], rail=r["rail"], input_per_m=r.get("cost_input_per_m"), output_per_m=r.get("cost_output_per_m")) for r in rows]
+        """Models the gateway will dispatch to. ``GET /v1/inference/models``."""
+        data = self._client.get(_MODELS_PATH)
+        rows = data.get("data") if isinstance(data, dict) else data
+        return [InferenceModel(**r) for r in (rows or []) if isinstance(r, dict)]
 
     def profile(self, model_id: str) -> ModelProfile:
-        """A model's measured profile: the transition signature + pricing + live usage."""
+        """Deprecated. A model's measured profile read straight from the registry; requires
+        ``registry_url`` and ``registry_key``."""
+        warnings.warn(
+            "InferenceAPI.profile() reads the model registry directly and is deprecated; "
+            "use models() for the gateway's model list.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         rows = self._registry_get(f"/rest/v1/models?select=*&id=eq.{model_id}")
         if not rows:
             raise WaveError(f"model {model_id}: NOT ADMITTED", "MODEL_NOT_FOUND", 404)
@@ -122,9 +147,20 @@ class InferenceAPI:
             ),
         )
 
+    def _legacy_funnel_post(self, body: dict[str, Any]) -> Any:
+        response = httpx.post(
+            f"{self._funnel_url}/v1/chat/completions",
+            headers={"content-type": "application/json", "authorization": f"Bearer {self._client.api_key}"},
+            json=body,
+            timeout=120.0,
+        )
+        if not response.is_success:
+            raise WaveError(f"inference {response.status_code}: {response.text[:300]}", "INFERENCE_ERROR", response.status_code)
+        return response.json()
+
     def _registry_get(self, path: str) -> list[dict[str, Any]]:
         if not self._registry_url:
-            raise WaveError("InferenceAPI: registry_url is required for models()/profile()", "REGISTRY_UNCONFIGURED", 0)
+            raise WaveError("InferenceAPI: registry_url is required for profile()", "REGISTRY_UNCONFIGURED", 0)
         response = httpx.get(f"{self._registry_url}{path}", headers={"apikey": self._registry_key}, timeout=20.0)
         if not response.is_success:
             raise WaveError(f"registry {response.status_code}: {response.text[:200]}", "REGISTRY_ERROR", response.status_code)

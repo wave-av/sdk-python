@@ -64,10 +64,18 @@ def test_all_modules_import():
 
 def test_wave_client_import():
     """Core client classes should import."""
-    from wave_sdk import RateLimitError, WaveClient, WaveError
+    from wave_sdk import (
+        PaymentRequiredError,
+        RateLimitError,
+        RouteNotServedError,
+        WaveClient,
+        WaveError,
+    )
     assert callable(WaveClient)
     assert issubclass(WaveError, Exception)
     assert issubclass(RateLimitError, WaveError)
+    assert issubclass(PaymentRequiredError, WaveError)
+    assert issubclass(RouteNotServedError, WaveError)
 
 
 def test_wave_client_requires_api_key():
@@ -139,13 +147,13 @@ def test_wave_convenience_class():
 
 
 def test_api_count():
-    """Wave class should have exactly 43 API bindings (+ client) — the 42
-    TS-parity namespaces plus PR4's `compose` (a mirror of `@wave-av/sdk`'s
-    own PR4-SDK addition, tracked separately in wave-av/sdk)."""
+    """Wave class should have exactly 44 API bindings (+ client): the 42
+    TS-parity namespaces, `compose` (POST /v1/compose), and `usage`
+    (GET /v1/usage, added in 2.3.0)."""
     from wave_sdk import Wave
     w = Wave(api_key="test-key")
     api_attrs = [a for a in dir(w) if not a.startswith('_') and a != 'client']
-    assert len(api_attrs) == 43, f"Expected 43 APIs, got {len(api_attrs)}: {api_attrs}"
+    assert len(api_attrs) == 44, f"Expected 44 APIs, got {len(api_attrs)}: {api_attrs}"
 
 
 def test_pipeline_has_methods():

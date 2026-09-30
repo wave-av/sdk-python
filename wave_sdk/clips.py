@@ -7,6 +7,8 @@ Create, manage, and export video clips from streams and recordings.
 from __future__ import annotations
 
 import time
+import warnings
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -79,7 +81,7 @@ class ClipsAPI:
     Clips API client.
 
     Example:
-        >>> from wave import Wave
+        >>> from wave_sdk import Wave
         >>> wave = Wave(api_key="your-api-key")
         >>> clip = wave.clips.create(
         ...     title="Best Moment",
@@ -255,6 +257,32 @@ class ClipsAPI:
 
         return self._client.get(f"{self._base_path}/{clip_id}/exports", params=params)
 
+    def detect(
+        self,
+        video_id: str,
+        min_duration: float | None = None,
+        max_duration: float | None = None,
+        categories: Sequence[str] | None = None,
+        sensitivity: float | None = None,
+        max_clips: int | None = None,
+    ) -> dict[str, Any]:
+        """Start AI clip detection on a video. ``POST /v1/clips/detect``.
+
+        Returns the detection job (``{"id", "status", "progress", "createdAt"}``, HTTP 202).
+        """
+        body = {
+            "videoId": video_id,
+            "minDuration": min_duration,
+            "maxDuration": max_duration,
+            "categories": list(categories) if categories is not None else None,
+            "sensitivity": sensitivity,
+            "maxClips": max_clips,
+        }
+        result: dict[str, Any] = self._client.post(
+            f"{self._base_path}/detect", json={k: v for k, v in body.items() if v is not None}
+        )
+        return result
+
     def detect_highlights(
         self,
         source_type: Literal["stream", "recording"],
@@ -263,7 +291,13 @@ class ClipsAPI:
         min_score: float | None = None,
         max_results: int | None = None,
     ) -> list[ClipHighlight]:
-        """Detect highlights in source content."""
+        """Deprecated: calls ``/v1/clips/highlights/detect``, which the API does not serve.
+        Use :meth:`detect` (``POST /v1/clips/detect``)."""
+        warnings.warn(
+            "clips.detect_highlights() calls a route the API does not serve; use clips.detect(video_id)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         data: dict[str, Any] = {
             "source_type": source_type,
             "source_id": source_id,

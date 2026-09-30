@@ -15,7 +15,11 @@ class SentimentAnalysis(BaseModel):
 class SentimentAPI:
     def __init__(self, client: WaveClient): self._client = client; self._base = "/v1/sentiment"
     def analyze(self, asset_id: str, **kwargs: Any) -> SentimentAnalysis: return SentimentAnalysis(**self._client.post(self._base, json={"asset_id": asset_id, **kwargs}))
-    def analyze_text(self, text: str, **kwargs: Any) -> dict: return self._client.post(f"{self._base}/text", json={"text": text, **kwargs})
+    def analyze_text(self, text: str, include_emotions: bool | None = None, include_topics: bool | None = None, **kwargs: Any) -> dict:
+        """``POST /v1/sentiment/analyze``: score a piece of text directly."""
+        body = {"text": text, "includeEmotions": include_emotions, "includeTopics": include_topics, **kwargs}
+        result: dict = self._client.post(f"{self._base}/analyze", json={k: v for k, v in body.items() if v is not None})
+        return result
     def get(self, analysis_id: str) -> SentimentAnalysis: return SentimentAnalysis(**self._client.get(f"{self._base}/{analysis_id}"))
     def list(self, **params: Any) -> dict: return self._client.get(self._base, params={k: v for k, v in params.items() if v is not None})
     def remove(self, analysis_id: str) -> None: self._client.delete(f"{self._base}/{analysis_id}")
