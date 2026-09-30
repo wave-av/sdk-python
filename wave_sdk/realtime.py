@@ -1,12 +1,21 @@
 """WAVE SDK - Realtime API.
 
-The WAVE Realtime control & event plane (realtime.wave.online): presence, pub/sub broadcast, and the
-streaming-event bus the WAVE AI products push into. Subscribe once to a channel and receive live
-transcription / captions / sentiment / clip / stream events with no polling.
+The WAVE Realtime control & event plane: presence, pub/sub broadcast, and the streaming-event bus
+the WAVE AI products push into. Subscribe once to a channel and receive live transcription /
+captions / sentiment / clip / stream events with no polling.
+
+Everything goes through the API host (``https://api.wave.online``):
+
+* REST: ``POST /v1/realtime/channels/{channel}/publish``, ``GET .../presence``, ``GET .../history``
+  (sent through :class:`~wave_sdk.client.WaveClient`, so they carry ``X-Organization-Id`` and
+  raise :class:`~wave_sdk.client.WaveError` on failure like every other namespace);
+* WebSocket: ``wss://api.wave.online/v1/realtime/connect?channel=...``.
 
 WebSocket support uses the optional ``websocket-client`` package: ``pip install 'wave-sdk[realtime]'``.
-Auth, scope, entitlement, and metering are enforced server-side (the gateway, via realtime's /v1/verify
-federation) — the SDK only forwards your API key.
+Credentials travel only in the ``Authorization`` header, on the REST calls and on the WebSocket
+upgrade alike. ``websocket-client`` sets arbitrary upgrade headers, so the browser constraint that
+forces a ``?access_token=`` query parameter does not apply here, and the SDK never puts the key in
+a URL (a URL is recorded by every proxy and edge log that sees the request line).
 """
 from __future__ import annotations
 
@@ -14,20 +23,69 @@ import contextlib
 import json
 from collections.abc import Iterator
 from typing import Any, Callable
+from urllib.parse import urlencode, urlsplit
 
 import httpx
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, WaveError, __version__, error_from_response, path_segment
 
-_DEFAULT_WS = "wss://realtime.wave.online"
+_DEFAULT_WS = "wss://api.wave.online"
+_CONNECT_PATH = "/v1/realtime/connect"
+_CHANNELS_PATH = "/v1/realtime/channels"
 
 
-def _http_origin(ws_url: str) -> str:
-    """Derive the https REST origin from a (ws/wss) base URL."""
-    base = ws_url.rstrip("/")
-    if base.startswith("ws"):
-        return "http" + base[2:]
+def _ws_origin(http_url: str) -> str:
+    """Derive the ws(s) origin from an http(s) base URL (``https://api.wave.online`` -> ``wss://...``)."""
+    base = http_url.rstrip("/")
+    if base.startswith("https://"):
+        return "wss://" + base[len("https://"):]
+    if base.startswith("http://"):
+        return "ws://" + base[len("http://"):]
     return base
+
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _require_tls(ws_base: str) -> None:
+    """The upgrade carries the API key, so it must be encrypted: ``wss://``, or ``ws://`` to a
+    loopback host only (a local development server)."""
+    parts = urlsplit(ws_base)
+    if parts.scheme == "wss":
+        return
+    if parts.scheme == "ws" and (parts.hostname or "") in _LOOPBACK_HOSTS:
+        return
+    raise ValueError(
+        f"WAVE realtime: refusing to send the API key to {parts.scheme or '?'}://{parts.hostname or ws_base}; "
+        "use a wss:// origin (ws:// is allowed only for localhost)"
+    )
+
+
+def _channel_path(channel: str) -> str:
+    """Percent-encode a channel for use as a single REST path segment.
+
+    ``:`` stays literal because WAVE channel names are ``stream:abc`` shaped (the API answers
+    404 for ``stream%3Aabc``); everything else that could leave the segment (``/``, ``?``, ``#``,
+    ``&``) is encoded, and an empty or ``.``/``..`` channel raises ``ValueError``.
+    """
+    return path_segment(channel)
+
+
+def _handshake_error(exc: Exception) -> WaveError | None:
+    """Turn a rejected WebSocket upgrade (websocket-client's WebSocketBadStatusException) into the
+    same WaveError subclass the REST path raises for that status and body."""
+    status = getattr(exc, "status_code", None)
+    if not isinstance(status, int):
+        return None
+    body = getattr(exc, "resp_body", None) or b""
+    if isinstance(body, str):
+        body = body.encode()
+    headers = getattr(exc, "resp_headers", None) or {}
+    try:
+        response = httpx.Response(status, content=body, headers=dict(headers))
+    except Exception:  # pragma: no cover - defensive: malformed handshake headers
+        response = httpx.Response(status, content=body)
+    return error_from_response(response)
 
 
 class RealtimeChannel:
@@ -40,7 +98,14 @@ class RealtimeChannel:
         ch.run()  # blocks, dispatching frames
     """
 
-    def __init__(self, channel: str, api_key: str, ws_base: str = _DEFAULT_WS, as_: str | None = None):
+    def __init__(
+        self,
+        channel: str,
+        api_key: str,
+        ws_base: str = _DEFAULT_WS,
+        as_: str | None = None,
+        organization_id: str | None = None,
+    ):
         try:
             import websocket  # websocket-client (optional dep)
         except ImportError as e:  # pragma: no cover - import guard
@@ -48,14 +113,29 @@ class RealtimeChannel:
                 "WAVE realtime requires the 'websocket-client' package: pip install 'wave-sdk[realtime]'"
             ) from e
         self.channel = channel
-        # Browser/SDK clients can't set headers on the WS upgrade → key travels as a query param (wss).
-        url = f"{ws_base.rstrip('/')}/v1/connect?channel={channel}&access_token={api_key}"
+
+        # Every value is urlencoded: a channel containing '&' or '#' would otherwise inject or
+        # truncate query parameters on the upgrade.
+        params: dict[str, str] = {"channel": channel}
         if as_:
-            url += f"&as={as_}"
-        self._ws = websocket.create_connection(url)
+            params["as"] = as_
+
+        headers = [f"Authorization: Bearer {api_key}", f"User-Agent: wave-sdk-python/{__version__}"]
+        if organization_id:
+            headers.append(f"X-Organization-Id: {organization_id}")
+
+        _require_tls(ws_base)
+        url = f"{ws_base.rstrip('/')}{_CONNECT_PATH}?{urlencode(params)}"
+        try:
+            self._ws = websocket.create_connection(url, header=headers)
+        except Exception as e:
+            error = _handshake_error(e)
+            if error is not None:
+                raise error from e
+            raise
         self._handlers: dict[str, list[Callable[[Any], None]]] = {}
 
-    def __iter__(self) -> Iterator[dict]:
+    def __iter__(self) -> Iterator[dict[str, Any]]:
         try:
             while True:
                 raw = self._ws.recv()
@@ -97,35 +177,46 @@ class RealtimeChannel:
 
 class RealtimeAPI:
     """Realtime entry point. ``wave.realtime.connect('stream:abc')`` for WS; ``publish/presence/history``
-    are one-shot REST calls for producers that don't hold a socket."""
+    are one-shot REST calls for producers that don't hold a socket.
 
-    def __init__(self, client: WaveClient, url: str = _DEFAULT_WS):
+    ``url`` overrides the WebSocket origin (default: the client's ``base_url`` with ``https``
+    swapped for ``wss``); the connect path ``/v1/realtime/connect`` is appended to it.
+    """
+
+    def __init__(self, client: WaveClient, url: str | None = None):
+        self._client = client
         self._api_key = client.api_key
-        self._ws_base = url.rstrip("/")
-        self._http_base = _http_origin(self._ws_base)
+        # Multi-tenant isolation: WaveClient stamps X-Organization-Id on every REST call, so the
+        # WebSocket upgrade carries it too.
+        self._organization_id = client.organization_id
+        self._ws_base = (url or _ws_origin(client.base_url)).rstrip("/")
 
     def connect(self, channel: str, as_: str | None = None) -> RealtimeChannel:
-        return RealtimeChannel(channel, self._api_key, self._ws_base, as_)
+        """Open ``wss://…/v1/realtime/connect?channel=…``. A rejected upgrade raises the same
+        :class:`~wave_sdk.client.WaveError` subclass a REST call would for that status and body."""
+        return RealtimeChannel(
+            channel, self._api_key, self._ws_base, as_, organization_id=self._organization_id
+        )
 
-    def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._api_key}", "content-type": "application/json"}
-
-    def publish(self, channel: str, event: str, data: Any = None) -> dict:
-        r = httpx.post(
-            f"{self._http_base}/v1/channels/{channel}/publish",
-            headers=self._headers(),
+    def publish(self, channel: str, event: str, data: Any = None) -> dict[str, Any]:
+        """``POST /v1/realtime/channels/{channel}/publish`` (scope ``realtime:write``)."""
+        # Sent once: a publish the API accepted before a timeout or bare 5xx would otherwise be
+        # broadcast twice. The caller decides whether to retry.
+        result: dict[str, Any] = self._client.post(
+            f"{_CHANNELS_PATH}/{_channel_path(channel)}/publish",
             json={"event": event, "data": data},
+            no_retry=True,
         )
-        return r.json()
+        return result
 
-    def presence(self, channel: str) -> dict:
-        r = httpx.get(f"{self._http_base}/v1/channels/{channel}/presence", headers=self._headers())
-        return r.json()
+    def presence(self, channel: str) -> dict[str, Any]:
+        """``GET /v1/realtime/channels/{channel}/presence``."""
+        result: dict[str, Any] = self._client.get(f"{_CHANNELS_PATH}/{_channel_path(channel)}/presence")
+        return result
 
-    def history(self, channel: str, limit: int = 50) -> dict:
-        r = httpx.get(
-            f"{self._http_base}/v1/channels/{channel}/history",
-            headers=self._headers(),
-            params={"limit": limit},
+    def history(self, channel: str, limit: int = 50) -> dict[str, Any]:
+        """``GET /v1/realtime/channels/{channel}/history`` (the API caps ``limit`` at 50)."""
+        result: dict[str, Any] = self._client.get(
+            f"{_CHANNELS_PATH}/{_channel_path(channel)}/history", params={"limit": limit}
         )
-        return r.json()
+        return result

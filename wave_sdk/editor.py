@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+import warnings
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 class EditorProject(BaseModel):
@@ -45,7 +46,16 @@ class EditorAPI:
     def remove_effect(self, project_id: str, effect_id: str) -> None: self._client.delete(f"{self._base}/{project_id}/effects/{effect_id}")
     def get_preview_frame(self, project_id: str, time_seconds: float) -> dict: return self._client.get(f"{self._base}/{project_id}/preview/frame", params={"time": time_seconds})
     def get_preview_segment(self, project_id: str, start: float, end: float) -> dict: return self._client.get(f"{self._base}/{project_id}/preview/segment", params={"start": start, "end": end})
-    def render(self, project_id: str, **kwargs: Any) -> RenderJob: return RenderJob(**self._client.post(f"{self._base}/{project_id}/render", json=kwargs if kwargs else None))
+    def export(self, project_id: str, format: Literal["mp4", "webm", "mov"] | None = None, resolution: str | None = None, quality: Literal["low", "medium", "high", "ultra"] | None = None) -> dict[str, Any]:
+        """Render a project to a file. ``POST /v1/editor/projects/{projectId}/export`` -> an export job (HTTP 202)."""
+        body = {"format": format, "resolution": resolution, "quality": quality}
+        # Sent once (billed): a retry after the API accepted the export would render it twice.
+        result: dict[str, Any] = self._client.post(f"{self._base}/{path_segment(project_id)}/export", json={k: v for k, v in body.items() if v is not None}, no_retry=True)
+        return result
+    def render(self, project_id: str, **kwargs: Any) -> RenderJob:
+        """Deprecated: calls ``.../render``; the published API operation is ``.../export``. Use :meth:`export`."""
+        warnings.warn("editor.render() calls .../render, which is not a published API operation; use editor.export(project_id)", DeprecationWarning, stacklevel=2)
+        return RenderJob(**self._client.post(f"{self._base}/{project_id}/render", json=kwargs if kwargs else None))
     def get_render_job(self, job_id: str) -> RenderJob: return RenderJob(**self._client.get(f"/v1/editor/renders/{job_id}"))
     def list_render_jobs(self, project_id: str, **params: Any) -> dict: return self._client.get(f"{self._base}/{project_id}/renders", params={k: v for k, v in params.items() if v is not None})
     def cancel_render_job(self, job_id: str) -> None: self._client.post(f"/v1/editor/renders/{job_id}/cancel")

@@ -1,383 +1,1542 @@
 {
-  "source": "https://api.wave.online/openapi.json",
-  "fetched": "2026-09-01",
-  "info_version": "1.0.0",
-  "total_ops": 75,
-  "operations": [
-    {
-      "operationId": "agentAuthDevice",
-      "method": "POST",
-      "path": "/agent/auth/device"
-    },
-    {
-      "operationId": "agentAuthToken",
-      "method": "POST",
-      "path": "/agent/auth/token"
-    },
-    {
-      "operationId": "avDemux",
-      "method": "POST",
-      "path": "/av/demux"
-    },
-    {
-      "operationId": "avRemux",
-      "method": "POST",
-      "path": "/av/remux"
-    },
-    {
-      "operationId": "batchOperations",
-      "method": "POST",
-      "path": "/batch"
-    },
-    {
-      "operationId": "publishBraidAudio",
-      "method": "POST",
-      "path": "/braid/publish"
-    },
-    {
-      "operationId": "stopBraidAudio",
-      "method": "DELETE",
-      "path": "/braid/publish/{ns}"
-    },
-    {
-      "operationId": "listCaptions",
-      "method": "GET",
-      "path": "/captions"
-    },
-    {
-      "operationId": "createCaptionJob",
-      "method": "POST",
-      "path": "/captions"
-    },
-    {
-      "operationId": "deleteCaptionJob",
-      "method": "DELETE",
-      "path": "/captions/{jobId}"
-    },
-    {
-      "operationId": "getCaptionJob",
-      "method": "GET",
-      "path": "/captions/{jobId}"
-    },
-    {
-      "operationId": "downloadCaptions",
-      "method": "GET",
-      "path": "/captions/{jobId}/download"
-    },
-    {
-      "operationId": "listClips",
-      "method": "GET",
-      "path": "/clips"
-    },
-    {
-      "operationId": "createClip",
-      "method": "POST",
-      "path": "/clips"
-    },
-    {
-      "operationId": "detectClips",
-      "method": "POST",
-      "path": "/clips/detect"
-    },
-    {
-      "operationId": "deleteClip",
-      "method": "DELETE",
-      "path": "/clips/{clipId}"
-    },
-    {
-      "operationId": "getClip",
-      "method": "GET",
-      "path": "/clips/{clipId}"
-    },
-    {
-      "operationId": "updateClip",
-      "method": "PATCH",
-      "path": "/clips/{clipId}"
-    },
-    {
-      "operationId": "listCollabRooms",
-      "method": "GET",
-      "path": "/collab/rooms"
-    },
-    {
-      "operationId": "createCollabRoom",
-      "method": "POST",
-      "path": "/collab/rooms"
-    },
-    {
-      "operationId": "deleteCollabRoom",
-      "method": "DELETE",
-      "path": "/collab/rooms/{roomId}"
-    },
-    {
-      "operationId": "getCollabRoom",
-      "method": "GET",
-      "path": "/collab/rooms/{roomId}"
-    },
-    {
-      "operationId": "custodyOperation",
-      "method": "POST",
-      "path": "/custody/{op}"
-    },
-    {
-      "operationId": "listProjects",
-      "method": "GET",
-      "path": "/editor/projects"
-    },
-    {
-      "operationId": "createProject",
-      "method": "POST",
-      "path": "/editor/projects"
-    },
-    {
-      "operationId": "deleteProject",
-      "method": "DELETE",
-      "path": "/editor/projects/{projectId}"
-    },
-    {
-      "operationId": "getProject",
-      "method": "GET",
-      "path": "/editor/projects/{projectId}"
-    },
-    {
-      "operationId": "updateProject",
-      "method": "PATCH",
-      "path": "/editor/projects/{projectId}"
-    },
-    {
-      "operationId": "exportProject",
-      "method": "POST",
-      "path": "/editor/projects/{projectId}/export"
-    },
-    {
-      "operationId": "engineCapabilities",
-      "method": "GET",
-      "path": "/engine/capabilities"
-    },
-    {
-      "operationId": "gpuStatus",
-      "method": "GET",
-      "path": "/gpu/infer"
-    },
-    {
-      "operationId": "gpuInfer",
-      "method": "POST",
-      "path": "/gpu/infer"
-    },
-    {
-      "operationId": "identityResolve",
-      "method": "GET",
-      "path": "/identity/resolve"
-    },
-    {
-      "operationId": null,
-      "method": "GET",
-      "path": "/leaderboard"
-    },
-    {
-      "operationId": "mintMoqPublishToken",
-      "method": "POST",
-      "path": "/moq/publish/{ns}/{track}"
-    },
-    {
-      "operationId": "mintMoqSubscribeToken",
-      "method": "GET",
-      "path": "/moq/subscribe/{ns}/{track}"
-    },
-    {
-      "operationId": "listCalls",
-      "method": "GET",
-      "path": "/phone/calls"
-    },
-    {
-      "operationId": "makeCall",
-      "method": "POST",
-      "path": "/phone/calls"
-    },
-    {
-      "operationId": "listPhoneLines",
-      "method": "GET",
-      "path": "/phone/lines"
-    },
-    {
-      "operationId": "provisionPhoneLine",
-      "method": "POST",
-      "path": "/phone/lines"
-    },
-    {
-      "operationId": null,
-      "method": "GET",
-      "path": "/platform"
-    },
-    {
-      "operationId": "listPodcastShows",
-      "method": "GET",
-      "path": "/podcast/shows"
-    },
-    {
-      "operationId": "createPodcastShow",
-      "method": "POST",
-      "path": "/podcast/shows"
-    },
-    {
-      "operationId": "listPodcastEpisodes",
-      "method": "GET",
-      "path": "/podcast/shows/{showId}/episodes"
-    },
-    {
-      "operationId": "createPodcastEpisode",
-      "method": "POST",
-      "path": "/podcast/shows/{showId}/episodes"
-    },
-    {
-      "operationId": "pricingManifestsList",
-      "method": "GET",
-      "path": "/pricing/manifests"
-    },
-    {
-      "operationId": "pricingManifestsCreate",
-      "method": "POST",
-      "path": "/pricing/manifests"
-    },
-    {
-      "operationId": "realtimeHistory",
-      "method": "GET",
-      "path": "/realtime/channels/{channel}/history"
-    },
-    {
-      "operationId": "realtimePresence",
-      "method": "GET",
-      "path": "/realtime/channels/{channel}/presence"
-    },
-    {
-      "operationId": "realtimePublish",
-      "method": "POST",
-      "path": "/realtime/channels/{channel}/publish"
-    },
-    {
-      "operationId": "realtimeConnect",
-      "method": "GET",
-      "path": "/realtime/connect"
-    },
-    {
-      "operationId": "renderVideo",
-      "method": "POST",
-      "path": "/render"
-    },
-    {
-      "operationId": "renderPoll",
-      "method": "GET",
-      "path": "/render/{jobId}"
-    },
-    {
-      "operationId": "renderEvents",
-      "method": "GET",
-      "path": "/render/{jobId}/events"
-    },
-    {
-      "operationId": "search",
-      "method": "POST",
-      "path": "/search"
-    },
-    {
-      "operationId": "searchAnalytics",
-      "method": "GET",
-      "path": "/search/analytics"
-    },
-    {
-      "operationId": "searchIndex",
-      "method": "POST",
-      "path": "/search/index"
-    },
-    {
-      "operationId": "searchDelete",
-      "method": "DELETE",
-      "path": "/search/index/{id}"
-    },
-    {
-      "operationId": "listSentimentAnalyses",
-      "method": "GET",
-      "path": "/sentiment"
-    },
-    {
-      "operationId": "createSentimentAnalysis",
-      "method": "POST",
-      "path": "/sentiment"
-    },
-    {
-      "operationId": "analyzeText",
-      "method": "POST",
-      "path": "/sentiment/analyze"
-    },
-    {
-      "operationId": "listEnhancements",
-      "method": "GET",
-      "path": "/studio-ai/enhancements"
-    },
-    {
-      "operationId": "createEnhancement",
-      "method": "POST",
-      "path": "/studio-ai/enhancements"
-    },
-    {
-      "operationId": "previewEnhancement",
-      "method": "POST",
-      "path": "/studio-ai/preview"
-    },
-    {
-      "operationId": "listTranscriptions",
-      "method": "GET",
-      "path": "/transcribe"
-    },
-    {
-      "operationId": "createTranscription",
-      "method": "POST",
-      "path": "/transcribe"
-    },
-    {
-      "operationId": "deleteTranscription",
-      "method": "DELETE",
-      "path": "/transcribe/{transcriptionId}"
-    },
-    {
-      "operationId": "getTranscription",
-      "method": "GET",
-      "path": "/transcribe/{transcriptionId}"
-    },
-    {
-      "operationId": null,
-      "method": "GET",
-      "path": "/usage"
-    },
-    {
-      "operationId": "listChapters",
-      "method": "GET",
-      "path": "/videos/{videoId}/chapters"
-    },
-    {
-      "operationId": "createChapter",
-      "method": "POST",
-      "path": "/videos/{videoId}/chapters"
-    },
-    {
-      "operationId": "detectChapters",
-      "method": "POST",
-      "path": "/videos/{videoId}/chapters/detect"
-    },
-    {
-      "operationId": "cloneVoice",
-      "method": "POST",
-      "path": "/voice/clone"
-    },
-    {
-      "operationId": "generateSpeech",
-      "method": "POST",
-      "path": "/voice/generate"
-    },
-    {
-      "operationId": "listVoices",
-      "method": "GET",
-      "path": "/voice/voices"
-    }
-  ]
+ "source": "https://api.wave.online/openapi.json",
+ "servers": [
+  "https://api.wave.online/v1"
+ ],
+ "spec_version": "1.1.0",
+ "fetched": "2026-09-30",
+ "total_paths": 230,
+ "total_ops": 255,
+ "operations": [
+  {
+   "method": "POST",
+   "path": "/accessibility-studio",
+   "operationId": "accessibilityStudio",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/acp",
+   "operationId": "acp",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/acuity",
+   "operationId": "acuity",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/aegis",
+   "operationId": "aegis",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/aes67",
+   "operationId": "aes67",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/agent/auth/device",
+   "operationId": "agentAuthDevice",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/agent/auth/token",
+   "operationId": "agentAuthToken",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/agentic-media",
+   "operationId": "agenticMedia",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/agents",
+   "operationId": "agents",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/ai",
+   "operationId": "ai",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/analytics",
+   "operationId": "analytics",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/analytics/engagement",
+   "operationId": "getAnalyticsEngagement",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/analytics/overview",
+   "operationId": "getAnalyticsOverview",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/analytics/top-content",
+   "operationId": "getAnalyticsTopContent",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/api-gateway",
+   "operationId": "apiGateway",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/archive",
+   "operationId": "archive",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/argus",
+   "operationId": "argus",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/audience-engagement",
+   "operationId": "audienceEngagement",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/audio-mastering",
+   "operationId": "audioMastering",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/auth",
+   "operationId": "auth",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/autopilot",
+   "operationId": "autopilot",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/av/demux",
+   "operationId": "avDemux",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/av/remux",
+   "operationId": "avRemux",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/batch",
+   "operationId": "batchOperations",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/behavioral-intelligence",
+   "operationId": "behavioralIntelligence",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/benchmark",
+   "operationId": "benchmark",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/billing",
+   "operationId": "getBilling",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/billing/usage",
+   "operationId": "getBillingUsage",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/bmd",
+   "operationId": "bmd",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/braid/publish",
+   "operationId": "publishBraidAudio",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/braid/publish/{ns}",
+   "operationId": "stopBraidAudio",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/bridge",
+   "operationId": "bridge",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/broadcast",
+   "operationId": "broadcast",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/camera-control",
+   "operationId": "cameraControl",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/cameras",
+   "operationId": "listCameras",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/cameras",
+   "operationId": "registerCamera",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/cameras/{cameraId}/control",
+   "operationId": "controlCamera",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/campus",
+   "operationId": "campus",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/captions",
+   "operationId": "listCaptions",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/captions",
+   "operationId": "createCaptionJob",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/captions/{jobId}",
+   "operationId": "deleteCaptionJob",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/captions/{jobId}",
+   "operationId": "getCaptionJob",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/captions/{jobId}/download",
+   "operationId": "downloadCaptions",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/challenge",
+   "operationId": "challenge",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/chapters",
+   "operationId": "chapters",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/ci",
+   "operationId": "ci",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/clips",
+   "operationId": "listClips",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/clips",
+   "operationId": "createClip",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/clips/detect",
+   "operationId": "detectClips",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/clips/{clipId}",
+   "operationId": "deleteClip",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/clips/{clipId}",
+   "operationId": "getClip",
+   "skill_invocation": false
+  },
+  {
+   "method": "PATCH",
+   "path": "/clips/{clipId}",
+   "operationId": "updateClip",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/cloud-switcher",
+   "operationId": "cloudSwitcher",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/collab/rooms",
+   "operationId": "listCollabRooms",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/collab/rooms",
+   "operationId": "createCollabRoom",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/collab/rooms/{roomId}",
+   "operationId": "deleteCollabRoom",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/collab/rooms/{roomId}",
+   "operationId": "getCollabRoom",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/companion",
+   "operationId": "companion",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/competitive-intel",
+   "operationId": "competitiveIntel",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/compliance",
+   "operationId": "compliance",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/compose",
+   "operationId": "createComposeProposal",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/compose/proposals/{proposalId}",
+   "operationId": "getComposeProposal",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/compose/run",
+   "operationId": "runComposeProposal",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/connect",
+   "operationId": "connect",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/cookie-consent",
+   "operationId": "cookieConsent",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/cost",
+   "operationId": "cost",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/creator",
+   "operationId": "creator",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/creator-economy",
+   "operationId": "creatorEconomy",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/creator-storefront",
+   "operationId": "creatorStorefront",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/crest",
+   "operationId": "crest",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/cro",
+   "operationId": "cro",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/custody/{op}",
+   "operationId": "custodyOperation",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/dante",
+   "operationId": "dante",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/data-exchange",
+   "operationId": "dataExchange",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/decode",
+   "operationId": "decode",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/director",
+   "operationId": "director",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/discovery",
+   "operationId": "discovery",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/dispatch",
+   "operationId": "dispatch",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/dmca",
+   "operationId": "dmca",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/dsar",
+   "operationId": "dsar",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/dub",
+   "operationId": "dub",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/echo",
+   "operationId": "echo",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/edge",
+   "operationId": "edge",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/editor/projects",
+   "operationId": "listProjects",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/editor/projects",
+   "operationId": "createProject",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/editor/projects/{projectId}",
+   "operationId": "deleteProject",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/editor/projects/{projectId}",
+   "operationId": "getProject",
+   "skill_invocation": false
+  },
+  {
+   "method": "PATCH",
+   "path": "/editor/projects/{projectId}",
+   "operationId": "updateProject",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/editor/projects/{projectId}/export",
+   "operationId": "exportProject",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/embeddings",
+   "operationId": "embeddings",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/encode",
+   "operationId": "encode",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/engagement",
+   "operationId": "engagement",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/engine/capabilities",
+   "operationId": "engineCapabilities",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/enhance",
+   "operationId": "enhance",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/example",
+   "operationId": "example",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/experiments",
+   "operationId": "experiments",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/fleet",
+   "operationId": "fleet",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/forecast",
+   "operationId": "forecast",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/geo",
+   "operationId": "geo",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/ghost-producer",
+   "operationId": "ghostProducer",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/gpu/infer",
+   "operationId": "gpuStatus",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/gpu/infer",
+   "operationId": "gpuInfer",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/graphics-engine",
+   "operationId": "graphicsEngine",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/identity/resolve",
+   "operationId": "identityResolve",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/integrations",
+   "operationId": "integrations",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/intel",
+   "operationId": "intel",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/leaderboard",
+   "operationId": null,
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/listen",
+   "operationId": "listen",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/live",
+   "operationId": "live",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/live-annotation",
+   "operationId": "liveAnnotation",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/live-commerce",
+   "operationId": "liveCommerce",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/live/caption",
+   "operationId": "transcribeLiveAudio",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/live/pipeline",
+   "operationId": "startLivePipeline",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/local-ai",
+   "operationId": "localAi",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/me",
+   "operationId": "me",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/memory",
+   "operationId": "memory",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/mesh",
+   "operationId": "mesh",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/mlvc",
+   "operationId": "mlvc",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/mobile-producer",
+   "operationId": "mobileProducer",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/moderate",
+   "operationId": "moderateContent",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/monetization",
+   "operationId": "monetization",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/monitoring",
+   "operationId": "monitoring",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/moq/publish/{ns}/{track}",
+   "operationId": "mintMoqPublishToken",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/moq/subscribe/{ns}/{track}",
+   "operationId": "mintMoqSubscribeToken",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/mpp",
+   "operationId": "mpp",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/mux",
+   "operationId": "mux",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/mxl",
+   "operationId": "mxl",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/ndi",
+   "operationId": "ndi",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/nvr",
+   "operationId": "nvr",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/omt",
+   "operationId": "omt",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/ops",
+   "operationId": "ops",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/orbit",
+   "operationId": "orbit",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/organizations",
+   "operationId": "organizations",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/outliers",
+   "operationId": "outliers",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/payments",
+   "operationId": "payments",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/perception",
+   "operationId": "perception",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/phone/calls",
+   "operationId": "listCalls",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/phone/calls",
+   "operationId": "makeCall",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/phone/lines",
+   "operationId": "listPhoneLines",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/phone/lines",
+   "operationId": "provisionPhoneLine",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/pipelines",
+   "operationId": "pipelines",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/platform",
+   "operationId": null,
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/podcast/shows",
+   "operationId": "listPodcastShows",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/podcast/shows",
+   "operationId": "createPodcastShow",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/podcast/shows/{showId}/episodes",
+   "operationId": "listPodcastEpisodes",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/podcast/shows/{showId}/episodes",
+   "operationId": "createPodcastEpisode",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/preferences",
+   "operationId": "preferences",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/presence",
+   "operationId": "presence",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/pricing/manifests",
+   "operationId": "pricingManifestsList",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/pricing/manifests",
+   "operationId": "pricingManifestsCreate",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/privy",
+   "operationId": "privy",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/production",
+   "operationId": "production",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/production-graph",
+   "operationId": "productionGraph",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/productions",
+   "operationId": "listProductions",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/productions",
+   "operationId": "createProduction",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/productions/{productionId}",
+   "operationId": "getProduction",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/productions/{productionId}/camera",
+   "operationId": "switchProductionCamera",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/productions/{productionId}/overlay",
+   "operationId": "setProductionOverlay",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/products",
+   "operationId": "products",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/pulse",
+   "operationId": "pulse",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/qr-system",
+   "operationId": "qrSystem",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/quality-scorecard",
+   "operationId": "qualityScorecard",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/radar",
+   "operationId": "radar",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/rate-limit",
+   "operationId": "rateLimit",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/realtime/channels/{channel}/history",
+   "operationId": "realtimeHistory",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/realtime/channels/{channel}/presence",
+   "operationId": "realtimePresence",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/realtime/channels/{channel}/publish",
+   "operationId": "realtimePublish",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/realtime/connect",
+   "operationId": "realtimeConnect",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/recommend",
+   "operationId": "recommend",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/remotion",
+   "operationId": "remotion",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/render",
+   "operationId": "renderVideo",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/render/{jobId}",
+   "operationId": "renderPoll",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/render/{jobId}/events",
+   "operationId": "renderEvents",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/renders",
+   "operationId": "renders",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/replay",
+   "operationId": "replay",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/replay-engine",
+   "operationId": "replayEngine",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/review",
+   "operationId": "review",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/rist",
+   "operationId": "rist",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/router",
+   "operationId": "router",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/routes",
+   "operationId": "routes",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/rtmp",
+   "operationId": "rtmp",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/runtime",
+   "operationId": "runtime",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/sandbox",
+   "operationId": "sandbox",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/scene",
+   "operationId": "scene",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/search",
+   "operationId": "search",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/search/analytics",
+   "operationId": "searchAnalytics",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/search/index",
+   "operationId": "searchIndex",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/search/index/{id}",
+   "operationId": "searchDelete",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/sentiment",
+   "operationId": "listSentimentAnalyses",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/sentiment",
+   "operationId": "createSentimentAnalysis",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/sentiment/analyze",
+   "operationId": "analyzeText",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/signal",
+   "operationId": "signal",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/signal-generator",
+   "operationId": "signalGenerator",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/signal-verifier",
+   "operationId": "signalVerifier",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/slides-to-video",
+   "operationId": "slidesToVideo",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/social-distribution",
+   "operationId": "socialDistribution",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/sports-data",
+   "operationId": "sportsData",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/srt",
+   "operationId": "srt",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/st2110",
+   "operationId": "st2110",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/stream",
+   "operationId": "stream",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/stream-router",
+   "operationId": "streamRouter",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/streamdeck",
+   "operationId": "streamdeck",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/streaming",
+   "operationId": "streaming",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/streams",
+   "operationId": null,
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/streams",
+   "operationId": null,
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/streams/{streamId}",
+   "operationId": "getStream",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/streams/{streamId}/analytics",
+   "operationId": "getStreamAnalytics",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/streams/{streamId}/highlights",
+   "operationId": "listStreamHighlights",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/streams/{streamId}/highlights",
+   "operationId": "markStreamHighlight",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/streams/{streamId}/start",
+   "operationId": "startStream",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/streams/{streamId}/status",
+   "operationId": "getStreamStatus",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/streams/{streamId}/stop",
+   "operationId": "stopStream",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/studio",
+   "operationId": "studio",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/studio-ai/enhancements",
+   "operationId": "listEnhancements",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/studio-ai/enhancements",
+   "operationId": "createEnhancement",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/studio-ai/preview",
+   "operationId": "previewEnhancement",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/studio-automation",
+   "operationId": "studioAutomation",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/switcher",
+   "operationId": "switcher",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/tempo",
+   "operationId": "tempo",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/transcode",
+   "operationId": "transcode",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/transcribe",
+   "operationId": "listTranscriptions",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/transcribe",
+   "operationId": "createTranscription",
+   "skill_invocation": false
+  },
+  {
+   "method": "DELETE",
+   "path": "/transcribe/{transcriptionId}",
+   "operationId": "deleteTranscription",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/transcribe/{transcriptionId}",
+   "operationId": "getTranscription",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/twilio",
+   "operationId": "twilio",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/unsubscribe",
+   "operationId": "unsubscribe",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/usage",
+   "operationId": null,
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/usb-relay",
+   "operationId": "usbRelay",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/vault",
+   "operationId": "vault",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/video-gen",
+   "operationId": "videoGen",
+   "skill_invocation": true
+  },
+  {
+   "method": "GET",
+   "path": "/videos/{videoId}/chapters",
+   "operationId": "listChapters",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/videos/{videoId}/chapters",
+   "operationId": "createChapter",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/videos/{videoId}/chapters/detect",
+   "operationId": "detectChapters",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/viewer",
+   "operationId": "viewer",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/virtual-studio",
+   "operationId": "virtualStudio",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/vision",
+   "operationId": "vision",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/visual-programming",
+   "operationId": "visualProgramming",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/visual-qa",
+   "operationId": "visualQa",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/vod",
+   "operationId": "vod",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/voice/clone",
+   "operationId": "cloneVoice",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/voice/generate",
+   "operationId": "generateSpeech",
+   "skill_invocation": false
+  },
+  {
+   "method": "GET",
+   "path": "/voice/voices",
+   "operationId": "listVoices",
+   "skill_invocation": false
+  },
+  {
+   "method": "POST",
+   "path": "/volumetric",
+   "operationId": "volumetric",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/wave-console",
+   "operationId": "waveConsole",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/wave-node",
+   "operationId": "waveNode",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/wave-sdk",
+   "operationId": "waveSdk",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/wave-tokens",
+   "operationId": "waveTokens",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/webrtc",
+   "operationId": "webrtc",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/whep",
+   "operationId": "whep",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/whip",
+   "operationId": "whip",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/workflow-engine",
+   "operationId": "workflowEngine",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/x402",
+   "operationId": "x402",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/zero-trust-vault",
+   "operationId": "zeroTrustVault",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/zoom",
+   "operationId": "zoom",
+   "skill_invocation": true
+  },
+  {
+   "method": "POST",
+   "path": "/zoom-integration",
+   "operationId": "zoomIntegration",
+   "skill_invocation": true
+  }
+ ]
 }

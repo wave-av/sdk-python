@@ -7,15 +7,15 @@ WAVE Online, LLC.
 Example:
     >>> from wave_sdk import Wave
     >>> client = Wave(api_key="your-api-key")
-    >>> streams = client.pipeline.list()
-    >>> clips = client.clips.list()
+    >>> usage = client.usage.get()
+    >>> results = client.search.search(query="product launch")
 """
 from __future__ import annotations
 
 from wave_sdk.audience import AudienceAPI
 from wave_sdk.captions import CaptionsAPI
 from wave_sdk.chapters import ChaptersAPI
-from wave_sdk.client import RateLimitError, WaveClient, WaveError, __version__
+from wave_sdk.client import WaveClient, __version__
 
 # Existing P3 modules
 from wave_sdk.clips import ClipsAPI
@@ -28,6 +28,7 @@ from wave_sdk.distribution import DistributionAPI
 from wave_sdk.drm import DrmAPI
 from wave_sdk.edge import EdgeAPI
 from wave_sdk.editor import EditorAPI
+from wave_sdk.errors import PaymentRequiredError, RateLimitError, RouteNotServedError, WaveError
 
 # P2 modules
 from wave_sdk.fleet import FleetAPI
@@ -62,6 +63,7 @@ from wave_sdk.studio import StudioAPI
 from wave_sdk.studio_ai import StudioAIAPI
 from wave_sdk.transcribe import TranscribeAPI
 from wave_sdk.transcripts import TranscriptAPI
+from wave_sdk.usage import UsageAPI
 from wave_sdk.usb import UsbAPI
 
 # P3 new modules
@@ -77,6 +79,8 @@ __all__ = [
     "WaveClient",
     "WaveError",
     "RateLimitError",
+    "PaymentRequiredError",
+    "RouteNotServedError",
     "RealtimeAPI",
     "RealtimeChannel",
     # Existing P3
@@ -99,6 +103,8 @@ __all__ = [
     "TranscriptAPI", "MailAPI", "MeterAPI", "PricingAPI", "PerceptionAPI", "InferenceAPI",
     # PR4: the Composer rendering (POST /v1/compose)
     "ComposeAPI",
+    # GET /v1/usage
+    "UsageAPI",
     # x402 agent payments
     "sign_exact_authorization", "encode_exact_payment_header",
 ]
@@ -111,9 +117,9 @@ class Wave:
     Example:
         >>> from wave_sdk import Wave
         >>> client = Wave(api_key="your-api-key", organization_id="org_123")
-        >>> streams = client.pipeline.list()
-        >>> clips = client.clips.list()
-        >>> client.prism.discover_sources()
+        >>> usage = client.usage.get()
+        >>> results = client.search.search(query="product launch")
+        >>> manifests = client.pricing.list_manifests()
     """
 
     def __init__(
@@ -201,3 +207,6 @@ class Wave:
         # Composer — POST /v1/compose: propose a plan across products for a
         # plain-English intent (PR4). Never executes; a proposal is a plan.
         self.compose = ComposeAPI(self.client)
+
+        # Usage - GET /v1/usage: the org's own metered totals (the quickest key check)
+        self.usage = UsageAPI(self.client)

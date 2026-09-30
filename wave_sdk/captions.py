@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+import warnings
+from typing import Any, Literal
 
+import httpx
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 class CaptionTrack(BaseModel):
@@ -33,7 +35,22 @@ class CaptionsAPI:
     def remove_cue(self, caption_id: str, cue_id: str) -> None: self._client.delete(f"{self._base}/{caption_id}/cues/{cue_id}")
     def bulk_update_cues(self, caption_id: str, cues: list[dict]) -> list[CaptionCue]: return [CaptionCue(**c) for c in self._client.put(f"{self._base}/{caption_id}/cues", json={"cues": cues})]
     def export_format(self, caption_id: str, format: str = "srt") -> dict: return self._client.get(f"{self._base}/{caption_id}/export", params={"format": format})
-    def get_text(self, caption_id: str, include_speakers: bool = False) -> dict: return self._client.get(f"{self._base}/{caption_id}/text", params={"include_speakers": include_speakers})
+    def download(self, job_id: str, language: str, format: Literal["srt", "vtt", "txt", "json"] | None = None) -> dict[str, Any]:
+        """Download a finished caption track. ``GET /v1/captions/{jobId}/download``.
+
+        Returns ``{"url": ..., "content": ...}``: a download URL and/or the caption text inline.
+        The published response is JSON; if the API answers with the caption file itself (for
+        example ``text/vtt``), its text is returned as ``content``, with ``content_type`` set.
+        """
+        response: httpx.Response = self._client.get(f"{self._base}/{path_segment(job_id)}/download", params={"language": language, "format": format}, raw=True)
+        if response.headers.get("content-type", "").startswith("application/json"):
+            result: dict[str, Any] = response.json()
+            return result
+        return {"content": response.text, "content_type": response.headers.get("content-type")}
+    def get_text(self, caption_id: str, include_speakers: bool = False) -> dict:
+        """Deprecated: calls ``/v1/captions/{id}/text``, which the API does not serve. Use :meth:`download`."""
+        warnings.warn("captions.get_text() calls a route the API does not serve; use captions.download(job_id, language, format='txt')", DeprecationWarning, stacklevel=2)
+        return self._client.get(f"{self._base}/{caption_id}/text", params={"include_speakers": include_speakers})
     def detect_language(self, media_id: str) -> dict: return self._client.post(f"{self._base}/detect-language", json={"media_id": media_id})
     def get_supported_languages(self) -> list[dict]: return self._client.get(f"{self._base}/languages")
     def get_for_media(self, media_id: str, media_type: str = "video") -> list[CaptionTrack]: return [CaptionTrack(**t) for t in self._client.get(f"{self._base}/media/{media_id}", params={"media_type": media_type})]

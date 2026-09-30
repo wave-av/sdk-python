@@ -7,63 +7,84 @@ Core HTTP client with authentication, rate limiting, and retry logic.
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import Any, Generic, TypeVar
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel
+
+# Error types live in wave_sdk.errors; they are re-exported here so existing
+# `from wave_sdk.client import WaveError` imports keep working.
+from wave_sdk.errors import (
+    PaymentRequiredError,
+    RateLimitError,
+    RouteNotServedError,
+    WaveError,
+    error_from_response,
+    retry_after_header,
+)
+
+__all__ = [
+    "PaginatedResponse",
+    "PaymentRequiredError",
+    "RateLimitError",
+    "RouteNotServedError",
+    "WaveClient",
+    "WaveError",
+    "__version__",
+    "error_from_response",
+]
 
 logger = logging.getLogger("wave_sdk")
 
 # Single source of truth for the SDK version, used both in the package's
 # public __version__ (re-exported from wave_sdk/__init__.py) and here in the
 # default User-Agent header, so the two can never drift.
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 T = TypeVar("T")
 
+# Longest server-requested wait the client sleeps through before retrying on its own. A longer
+# request is raised to the caller at once (with the full wait on the error) instead of sleeping.
+_MAX_SERVER_RETRY_AFTER = 60.0
 
-class WaveError(Exception):
-    """WAVE API error."""
-
-    def __init__(
-        self,
-        message: str,
-        code: str,
-        status_code: int,
-        request_id: str | None = None,
-        details: dict[str, Any] | None = None,
-    ):
-        super().__init__(message)
-        self.message = message
-        self.code = code
-        self.status_code = status_code
-        self.request_id = request_id
-        self.details = details
-        self.retryable = self._is_retryable(status_code, code)
-
-    def _is_retryable(self, status_code: int, code: str) -> bool:
-        if status_code == 429:
-            return True
-        if 500 <= status_code < 600:
-            return True
-        return code in ("TIMEOUT", "NETWORK_ERROR", "SERVICE_UNAVAILABLE")
-
-    def __str__(self) -> str:
-        return f"WaveError({self.code}): {self.message}"
+# Path segments a URL resolver treats as "this directory" or "the parent directory" (RFC 3986
+# section 5.2.4; a WHATWG URL parser also decodes ``%2e``). httpx and the server both collapse
+# them, so ``/v1/videos/../chapters`` would reach ``/v1/chapters``: an id equal to one of these
+# would move the request to another route with the caller's key.
+_DOT_SEGMENTS = frozenset({".", "..", "%2e", "%2e%2e", ".%2e", "%2e."})
 
 
-class RateLimitError(WaveError):
-    """Rate limit exceeded error."""
+def path_segment(value: str | int) -> str:
+    """Encode an id as exactly one URL path segment.
 
-    def __init__(
-        self,
-        message: str,
-        retry_after: float,
-        request_id: str | None = None,
-    ):
-        super().__init__(message, "RATE_LIMITED", 429, request_id)
-        self.retry_after = retry_after
+    ``/``, ``?``, ``#`` and ``%`` are percent-encoded (``:`` stays literal, as in
+    ``stream:abc``), so the id cannot add segments, a query or a fragment. An empty id, or one
+    that is a dot segment (``.``, ``..``), raises ``ValueError`` before anything is sent.
+    """
+    if value is None or isinstance(value, bool) or value == "":
+        raise ValueError("WAVE SDK: an id used in a URL path must be a non-empty string")
+    encoded = quote(str(value), safe=":")
+    if encoded.lower() in _DOT_SEGMENTS:
+        raise ValueError(f"WAVE SDK: {value!r} is not a valid id: it is a relative path segment")
+    return encoded
+
+
+def _check_path(path: str) -> None:
+    """Refuse a request path with a dot segment, whichever method built it.
+
+    Most namespaces interpolate ids into paths directly; this check is what keeps an id such as
+    ``..`` from redirecting any of them to a different route.
+    """
+    route = path.split("?", 1)[0].split("#", 1)[0]
+    for segment in route.split("/"):
+        if segment.lower() in _DOT_SEGMENTS:
+            raise ValueError(
+                f"WAVE SDK: refusing to send {path!r}: the dot segment {segment!r} would resolve "
+                "to a different route (check the ids passed to this method)"
+            )
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -83,7 +104,7 @@ class WaveClient:
 
     Example:
         >>> client = WaveClient(api_key="your-api-key")
-        >>> response = client.get("/v1/clips")
+        >>> usage = client.get("/v1/usage")
     """
 
     def __init__(
@@ -192,9 +213,16 @@ class WaveClient:
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         no_retry: bool = False,
+        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
-        """Make an API request with retry logic."""
+        """Make an API request with retry logic.
+
+        Returns the decoded JSON body, or ``None`` for a non-JSON success. With ``raw=True`` the
+        successful ``httpx.Response`` itself is returned, for routes that answer with bytes (audio,
+        caption files); errors still raise :class:`WaveError` exactly as on the JSON path.
+        """
+        _check_path(path)
         # Filter out None params
         if params:
             params = {k: v for k, v in params.items() if v is not None}
@@ -215,30 +243,19 @@ class WaveClient:
                     **kwargs,
                 )
 
-                # Handle rate limiting
-                if response.status_code == 429:
-                    retry_after = self._parse_retry_after(response)
-                    if attempt < max_retries:
-                        logger.warning(f"Rate limited. Retrying in {retry_after}s")
-                        time.sleep(retry_after)
-                        continue
-                    raise RateLimitError(
-                        "Rate limit exceeded",
-                        retry_after,
-                        response.headers.get("x-request-id"),
-                    )
-
-                # Handle errors
+                # Handle errors (a 429 parses to RateLimitError)
                 if not response.is_success:
                     error = self._parse_error(response)
-                    if error.retryable and attempt < max_retries:
-                        delay = self._calculate_backoff(attempt)
-                        logger.warning(f"Request failed. Retrying in {delay}s")
+                    delay = self._retry_delay(error, attempt, response)
+                    if delay is not None and attempt < max_retries:
+                        logger.warning(f"Request failed ({error.code}). Retrying in {delay}s")
                         time.sleep(delay)
                         continue
                     raise error
 
                 # Parse response
+                if raw:
+                    return response
                 if response.headers.get("content-type", "").startswith("application/json"):
                     return response.json()
                 return None
@@ -261,34 +278,30 @@ class WaveClient:
         raise WaveError("Request failed after retries", "UNKNOWN_ERROR", 0)
 
     def _parse_error(self, response: httpx.Response) -> WaveError:
-        """Parse error response."""
-        request_id = response.headers.get("x-request-id")
-        try:
-            body = response.json()
-            return WaveError(
-                body.get("error", {}).get("message", f"HTTP {response.status_code}"),
-                body.get("error", {}).get("code", f"HTTP_{response.status_code}"),
-                response.status_code,
-                request_id or body.get("request_id"),
-                body.get("error", {}).get("details"),
-            )
-        except Exception:
-            return WaveError(
-                f"HTTP {response.status_code}: {response.reason_phrase}",
-                f"HTTP_{response.status_code}",
-                response.status_code,
-                request_id,
-            )
+        """Parse an error response into the most specific WaveError subclass."""
+        return error_from_response(response)
 
-    def _parse_retry_after(self, response: httpx.Response) -> float:
-        """Parse Retry-After header."""
-        retry_after = response.headers.get("retry-after")
-        if not retry_after:
-            return 1.0
-        try:
-            return float(retry_after)
-        except ValueError:
-            return 1.0
+    def _retry_delay(
+        self, error: WaveError, attempt: int, response: httpx.Response | None = None
+    ) -> float | None:
+        """Seconds to sleep before retrying ``error``, or None to raise it now.
+
+        The wait is the server's: ``RateLimitError.retry_after`` for a 429; otherwise a usable
+        ``Retry-After`` header, then a ``retry_after`` directive, then exponential backoff. None
+        when the server's ``next_action`` says a retry cannot help, and when the server asked
+        for a longer wait than ``_MAX_SERVER_RETRY_AFTER`` (sleeping a capped time and retrying
+        early would only be refused again; the caller gets the full wait on the error).
+        """
+        if not error.retryable:
+            return None
+        if isinstance(error, RateLimitError):
+            wait: float | None = error.retry_after
+        else:
+            header = retry_after_header(response) if response is not None else None
+            wait = header if header is not None else error.retry_after_hint
+        if wait is None:
+            return self._calculate_backoff(attempt)
+        return wait if wait <= _MAX_SERVER_RETRY_AFTER else None
 
     def _calculate_backoff(self, attempt: int) -> float:
         """Calculate exponential backoff delay."""
@@ -296,8 +309,6 @@ class WaveClient:
         max_delay = 30.0
         delay = min(base_delay * (2**attempt), max_delay)
         # Add jitter
-        import random
-
         return delay + random.random() * delay * 0.25
 
     def close(self) -> None:

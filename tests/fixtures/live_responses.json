@@ -1,0 +1,410 @@
+{
+ "analytics_overview": {
+  "body": {
+   "organizationId": "org_fixture",
+   "period": {
+    "from": "2026-09-01",
+    "to": "2026-09-29"
+   },
+   "summary": {
+    "activeDays": 0,
+    "topDimensions": [],
+    "totalCostUsd": 0,
+    "totalEvents": null,
+    "totalQuantity": 0
+   }
+  },
+  "path": "/v1/analytics/overview",
+  "status": 200
+ },
+ "analytics_top_content": {
+  "body": {
+   "organizationId": "org_fixture",
+   "period": {
+    "from": "2026-09-01",
+    "to": "2026-09-29"
+   },
+   "topContent": []
+  },
+  "path": "/v1/analytics/top-content",
+  "status": 200
+ },
+ "err_method_not_allowed_405": {
+  "body": {
+   "error": "method not allowed"
+  },
+  "path": "/v1/sentiment",
+  "status": 405
+ },
+ "err_missing_node_400": {
+  "body": {
+   "error": "missing x-wave-node"
+  },
+  "path": "/v1/mesh/peers",
+  "status": 400
+ },
+ "err_product_route_not_found_404": {
+  "body": {
+   "error": {
+    "code": "search_route_not_found",
+    "message": "no route for /v1/search/quick",
+    "next_action": {
+     "reason": "see suggestions for how to resolve this error",
+     "type": "none"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000000"
+   }
+  },
+  "path": "/v1/search/quick",
+  "status": 404
+ },
+ "err_route_not_found_404": {
+  "body": {
+   "error": {
+    "code": "ROUTE_NOT_FOUND",
+    "doc_url": "https://gateway.wave.online/.well-known/wave-skills.json",
+    "message": "No WAVE capability is served at this path.",
+    "next_action": {
+     "reason": "no WAVE capability is served at this path; the free capability index is https://gateway.wave.online/.well-known/wave-skills.json",
+     "type": "none"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000000",
+    "suggestions": [
+     "Check the path for typos.",
+     "List available capabilities in the free capability index at the doc_url."
+    ]
+   }
+  },
+  "path": "/v1/streams",
+  "status": 404
+ },
+ "err_route_not_mapped_404": {
+  "body": {
+   "error": {
+    "code": "ROUTE_NOT_MAPPED",
+    "doc_url": "https://gateway.wave.online/.well-known/wave-skills.json",
+    "message": "no scope rule for this route (fail-closed)",
+    "next_action": {
+     "reason": "this path and method are not part of the WAVE API, so the gateway refuses them fail-closed; every callable route is listed at https://gateway.wave.online/.well-known/wave-skills.json",
+     "type": "none"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000000",
+    "suggestions": [
+     "Double-check the request path and HTTP method.",
+     "Every callable route, with the scope it requires, is listed in the free capability index."
+    ]
+   }
+  },
+  "path": "/v1/podcasts",
+  "status": 404
+ },
+ "err_scope_insufficient_403": {
+  "body": {
+   "error": {
+    "available_scopes": [
+     "acp:read",
+     "analytics:read",
+     "api-keys:read",
+     "comms:read",
+     "dante:read",
+     "directory:read",
+     "mesh:read",
+     "org:read",
+     "pricing:read",
+     "receipts:read",
+     "srt:read",
+     "streams:read",
+     "user:read",
+     "vision:read",
+     "vision:write",
+     "streams:write",
+     "clips:read",
+     "clips:write",
+     "recording:read",
+     "render:read",
+     "render:write",
+     "transcribe:read",
+     "transcribe:write",
+     "captions:read",
+     "captions:write",
+     "voice:read",
+     "voice:write",
+     "realtime:read",
+     "dispatch:read",
+     "dispatch:write",
+     "search:read",
+     "search:write",
+     "storage:read",
+     "storage:write",
+     "organizations:read",
+     "organizations:write",
+     "billing:read",
+     "insights:read",
+     "meter:read",
+     "usage:read",
+     "audit:read",
+     "acuity:read",
+     "engine:read",
+     "gpu:read",
+     "webhooks:read",
+     "webhooks:write",
+     "billing:write",
+     "sentiment:read",
+     "sentiment:write",
+     "podcast:read",
+     "podcast:write",
+     "composer:read",
+     "composer:write"
+    ],
+    "code": "SCOPE_INSUFFICIENT",
+    "doc_url": "https://gateway.wave.online/.well-known/wave-scopes.json",
+    "message": "requires scope: productions:read",
+    "next_action": {
+     "scope": "productions:read",
+     "type": "acquire_scope"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000000",
+    "required_scope": "productions:read",
+    "suggestions": [
+     "Issue a key that includes the scope named in `required_scope`, then retry.",
+     "Every route's required scope is listed in the free scope catalog at the doc_url."
+    ]
+   }
+  },
+  "path": "/v1/productions",
+  "status": 403
+ },
+ "err_spend_cap_402": {
+  "body": {
+   "code": "SPEND_CAP_TIER_BLOCKED",
+   "dimension": "wave_clip_minutes",
+   "error": "spend_cap_exceeded",
+   "message": "Add a payment method to continue — this action exceeds your plan's included allotment.",
+   "projected_cost_usd": 0,
+   "reason": "uncarded_costheavy_over",
+   "remaining_allowance_usd": 0
+  },
+  "path": "/v1/clips",
+  "status": 402
+ },
+ "err_store_unconfigured_503": {
+  "body": {
+   "error": {
+    "code": "COMPOSE_STORE_UNCONFIGURED",
+    "doc_url": "https://docs.wave.online/status",
+    "message": "The Composer proposal store is not bound on this deployment. Proposals still compose; re-reading one by id needs the store provisioned. This is server-side, not your request.",
+    "next_action": {
+     "reason": "see suggestions for how to resolve this error",
+     "type": "none"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000000",
+    "suggestions": [
+     "Retry POST /v1/compose to get a fresh proposal.",
+     "If it persists, check the WAVE status page."
+    ]
+   }
+  },
+  "path": "/v1/compose/proposals/prp_aaaaaaaaaaaaaaaaaaaa",
+  "status": 503
+ },
+ "err_x402_challenge_402": {
+  "body": {
+   "accepts": [
+    {
+     "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+     "description": "wave api access",
+     "extra": {
+      "quote_token": "fixture-quote-token",
+      "session_id": "00000000-0000-4000-8000-000000000000",
+      "settlement": "verified-on-chain-by-gateway",
+      "terms": "https://wave.online/legal/terms"
+     },
+     "maxAmountRequired": "20000",
+     "maxTimeoutSeconds": 60,
+     "mimeType": "application/json",
+     "network": "base",
+     "payTo": "0x0000000000000000000000000000000000000000",
+     "protocol": "x402",
+     "resource": "/v1/clips",
+     "scheme": "exact"
+    }
+   ],
+   "error": "payment required",
+   "error_detail": {
+    "code": "PAYMENT_REQUIRED",
+    "doc_url": "https://gateway.wave.online/.well-known/payments.json",
+    "message": "Payment required. Complete the x402 challenge in `accepts` to proceed.",
+    "next_action": {
+     "reason": "complete the x402 payment challenge in the response's accepts[] / root next_action",
+     "type": "none"
+    },
+    "session_id": "00000000-0000-4000-8000-000000000000",
+    "suggestions": [
+     "Sign the x402 'exact' authorization for accepts[0].maxAmountRequired and retry with the x-payment header.",
+     "See the WAVE payments-discovery document at the doc_url for the exact-scheme flow and every other protocol this gateway accepts."
+    ]
+   },
+   "next_action": {
+    "accepts": [
+     {
+      "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "description": "wave api access",
+      "extra": {
+       "quote_token": "fixture-quote-token",
+       "session_id": "00000000-0000-4000-8000-000000000000",
+       "settlement": "verified-on-chain-by-gateway",
+       "terms": "https://wave.online/legal/terms"
+      },
+      "maxAmountRequired": "20000",
+      "maxTimeoutSeconds": 60,
+      "mimeType": "application/json",
+      "network": "base",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "protocol": "x402",
+      "resource": "/v1/clips",
+      "scheme": "exact"
+     }
+    ],
+    "protocol": "x402",
+    "quote_token": "fixture-quote-token",
+    "session_id": "00000000-0000-4000-8000-000000000000",
+    "type": "pay"
+   },
+   "x402Version": 1
+  },
+  "path": "/v1/clips",
+  "status": 402
+ },
+ "inference_models": {
+  "body": {
+   "data": [
+    {
+     "id": "model-a",
+     "object": "model",
+     "owned_by": "wave"
+    },
+    {
+     "id": "model-b",
+     "object": "model",
+     "owned_by": "wave"
+    },
+    {
+     "id": "model-c",
+     "object": "model",
+     "owned_by": "wave"
+    }
+   ],
+   "object": "list"
+  },
+  "path": "/v1/inference/models",
+  "status": 200
+ },
+ "mesh_peers": {
+  "body": {
+   "count": 0,
+   "org": "org_fixture",
+   "peers": []
+  },
+  "path": "/v1/mesh/peers",
+  "status": 200
+ },
+ "meter_ledger": {
+  "body": {
+   "channels": {
+    "mail": {
+     "blocked": "mail_audit_not_owner",
+     "errors": 0,
+     "ops": 0,
+     "usdc": "0"
+    },
+    "realtime": {
+     "minutes": 0
+    },
+    "sms": {
+     "blocked": "a2p-unregistered",
+     "ops": 0
+    },
+    "storage": {
+     "bytes": 0
+    },
+    "voice": {
+     "minutes": 0,
+     "usdc": "0"
+    }
+   },
+   "from": "2026-09-29T00:00:00.000Z",
+   "generated_at": "2026-09-29T14:13:18.694Z",
+   "org": "org_fixture",
+   "to": "2026-09-29T23:59:59.999Z"
+  },
+  "path": "/v1/meter/ledger",
+  "status": 200
+ },
+ "meter_rollup": {
+  "body": {
+   "from": "2026-09-29T00:00:00.000Z",
+   "generated_at": "2026-09-29T14:13:19.048Z",
+   "org": "org_fixture",
+   "period": "month",
+   "to": "2026-09-29T23:59:59.999Z",
+   "totals": {
+    "mail": {
+     "blocked": "mail_audit_not_owner",
+     "errors": 0,
+     "ops": 0,
+     "usdc": "0"
+    },
+    "realtime": {
+     "minutes": 0
+    },
+    "sms": {
+     "blocked": "a2p-unregistered",
+     "ops": 0
+    },
+    "storage": {
+     "bytes": 0
+    },
+    "voice": {
+     "minutes": 0,
+     "usdc": "0"
+    }
+   }
+  },
+  "path": "/v1/meter/ledger/rollup",
+  "status": 200
+ },
+ "realtime_presence": {
+  "body": {
+   "channel": "stream:fixture",
+   "members": []
+  },
+  "path": "/v1/realtime/channels/stream:fixture/presence",
+  "status": 200
+ },
+ "usage": {
+  "body": {
+   "billable": {
+    "agent_seconds_second": 0,
+    "avsync_checks_check": 0,
+    "bytes_GB": 0,
+    "duration_ms:aes67_minute": 0
+   },
+   "org": "org_fixture",
+   "range": {
+    "days": 1,
+    "from": "20260929",
+    "to": "20260929"
+   },
+   "totals": {
+    "bytes": 0,
+    "duration_ms": 0,
+    "frames": 0,
+    "realtime_tokens": 0,
+    "transcription_seconds": 0,
+    "wave_search_queries": 0
+   }
+  },
+  "path": "/v1/usage",
+  "status": 200
+ }
+}

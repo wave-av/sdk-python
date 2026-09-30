@@ -6,6 +6,119 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [2.3.0] - not yet published (tag `v2.3.0` after merge publishes it)
+
+This pull request bumps the version, so its notes sit under the release heading rather than
+`Unreleased`.
+
+Connectivity release. Every free flow the README documents now succeeds against the live API
+with the documented `Authorization: Bearer` key (`scripts/smoke_live.py`). Billed flows reach
+their route and raise the server's own payment error. The contract test now checks the request
+each mapped method actually sends.
+
+### Fixed
+
+- **Realtime** used a host that does not resolve. `publish()`, `presence()` and `history()` now
+  go through the client to `https://api.wave.online/v1/realtime/channels/{channel}/...`, so they
+  raise `WaveError` on failure and send `X-Organization-Id`; the channel name is percent-encoded
+  (`:` stays literal). `connect()` opens `wss://api.wave.online/v1/realtime/connect` (derived
+  from `base_url`) and sends the key in the `Authorization` header on the upgrade instead of an
+  `?access_token=` query parameter. A rejected upgrade raises the matching `WaveError` subclass.
+  `connect()` refuses a `ws://` origin other than localhost with `ValueError`, because the key
+  would travel unencrypted.
+- **Inference** `complete()` posted to a proxy that rejects WAVE API keys. It now sends
+  `POST /v1/inference/chat/completions` through the client. `models()` reads
+  `GET /v1/inference/models` instead of requiring a registry URL and key. A 2xx without choices,
+  or without a model list, raises `WaveError` with code `INVALID_RESPONSE` instead of returning
+  an empty result.
+- **Meter** models failed to parse every live response. `ledger()` returns the single window the
+  API sends (`org`, `from`, `to`, `channels`, `generated_at`); a channel's `blocked` may be a
+  count or a reason string; unknown fields are kept; a counter the response leaves out is
+  `None`, never a default `0`.
+- **Billed or broadcast writes added in this release are sent once**: `inference.complete()`,
+  `realtime.publish()`, `voice.generate()`, `clips.detect()`, `chapters.detect()`,
+  `chapters.create_chapter()`, `editor.export()`, `podcast.create()` and
+  `podcast.create_episode()`. A timeout or bare 5xx after the server may have accepted the
+  request is raised to the caller instead of retried, since a retry could bill a job or
+  broadcast an event twice. Existing methods keep their retry behavior.
+- **Error parsing** kept only the `{"error": {"code", "message"}}` shape. Flat bodies
+  (`{"error": "...", "code": ..., "message": ...}`), bare `{"error": "..."}` bodies and the x402
+  challenge now keep the server's code, message and context instead of becoming
+  `HTTP_<status>`.
+- **Retries** follow the server's `next_action`: a permanent error (for example a 503 whose
+  directive is `none`, or a 429 whose directive is not a retry) is raised on the first attempt
+  instead of after three backoffs. A `Retry-After` header (on a 429 or any retryable 5xx) or a
+  `retry_after` directive sets the wait. A wait over 60 s is raised at once with the full value
+  on the error, instead of being slept through. A `Retry-After` that is not a finite, non-negative number of seconds is
+  ignored; before, `nan` or `-1` escaped as a non-`WaveError` exception.
+- **Rate limits** raise `RateLimitError` from a WebSocket upgrade too, not a plain `WaveError`.
+- **Inference** no longer sends the WAVE API key to `funnel_url`; the argument is ignored.
+- `captions.download()` returns the caption text as `content` if the API answers with the file
+  itself rather than JSON.
+- **Paths** moved to the published API operations: `podcast` uses `/v1/podcast/shows` and
+  `/v1/podcast/shows/{id}/episodes`; `sentiment.analyze_text()` posts to
+  `/v1/sentiment/analyze`.
+- **Mesh** requests carry the required `x-wave-node` header (`client.mesh.node`, or `node=` on
+  any method, mutations included); a call without one, or with a multi-line node name, raises
+  `ValueError` before sending. A per-call `node=` always wins, so `node=""` (or a blank name)
+  raises instead of silently using the client default. Mesh ids are encoded as one path segment, and the mutations
+  (`add_peer`, `remove_peer`, `create_policy`, `trigger_failover`) are sent once rather than
+  retried, so a 5xx after the server applied the change cannot fail over twice.
+- **Path safety**: every request whose path contains a `.` or `..` segment raises `ValueError`
+  before it is sent. httpx resolves those segments, so in 2.2.0 `clips.get("../usage")` was sent
+  to `/v1/usage` with the caller's key. The methods added or changed in this release also
+  encode an id as exactly one path segment (`/`, `?`, `#` and `%` are percent-encoded; `:`
+  stays literal).
+- Package docstring examples and the PyPI project links point at calls and pages that exist.
+
+### Added
+
+- `client.usage.get()`: `GET /v1/usage`, the organization's metered totals.
+- `PaymentRequiredError` (HTTP 402; `accepts` and `x402_version` for an x402 challenge, spend-cap
+  context in `details`) and `RouteNotServedError` (404 for a route no capability serves, or 405).
+  Both subclass `WaveError`. `WaveError` gains `next_action`, `suggestions` and `doc_url`.
+- `pulse.get_overview()` and `pulse.get_top_content()`; `from_`/`to` on
+  `pulse.get_engagement_metrics()`.
+- Methods for published operations the SDK sent to other paths: `clips.detect()`,
+  `captions.download()`, `voice.generate()`, `editor.export()`, `collab.delete_room()`,
+  `chapters.list_chapters()`, `chapters.create_chapter()`, `chapters.detect()`.
+- `raw=True` on `WaveClient.get()` / `post()` / ... returns the `httpx.Response` for binary
+  bodies.
+- `scripts/smoke_live.py`: runs the documented free flows against the live API.
+- `scripts/refresh_openapi_snapshot.py`: regenerates the OpenAPI snapshot the contract test
+  reads.
+
+### Deprecated
+
+These methods and arguments warn with `DeprecationWarning`. All but two call paths the API
+does not publish: `clips.detect_highlights()` (use `detect()`), `voice.synthesize()`
+(`generate()`), `captions.get_text()` (`download()`), `chapters.get_default_set()`
+(`list_chapters()`), `chapters.add_chapter()` (`create_chapter()`), `editor.render()`
+(`export()`), `inference.profile()`, and the podcast methods with no published operation
+(`get()`, `update()`, `remove()`, `get_episode()`, `publish_episode()`, `get_rss_feed()`,
+`get_analytics()`, `distribute()`). The two exceptions: `collab.close_room()` is now an alias of
+`delete_room()` and sends the published `DELETE`, and `InferenceAPI(funnel_url=...)` is ignored.
+
+### Changed
+
+- `podcast.create()` takes `name` (the API's field) as its first argument; `create_episode()`
+  requires `audio_url`. Both return `PodcastShow` / `PodcastEpisode` (`Podcast` and `Episode`
+  remain as aliases). The keyword `podcast_id=` is now `show_id=`. No 2.2.0 podcast call
+  reached a served route, so no working call changes behavior.
+- `MeterLedgerRow` is an alias of `MeterLedger`; `MeterLedger.rows` no longer exists.
+- The README lists which namespaces were checked live, which wrap published operations, and
+  which the API does not route today.
+
+### Testing
+
+- `tests/test_contract_coverage.py` calls every mapped method against a mock transport and
+  asserts the verb and path it sends match the spec operation (the old test only checked that
+  the method name existed). The snapshot now covers all 255 operations of the published
+  document.
+- `tests/test_errors.py`, `tests/test_realtime.py` and `tests/test_served_routes.py` cover the
+  error envelopes, the realtime URLs and headers, and parsing of recorded live response bodies
+  (`tests/fixtures/live_responses.json`, identifiers scrubbed).
+
 ## [2.2.0] - 2026-09-06
 
 ### Added

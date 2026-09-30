@@ -53,3 +53,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/release/check_drift.py --repo-root .
+
+  # The SDK against the published API: refresh the OpenAPI snapshot from the live document, then
+  # run the contract test. It fails when the document gains an operation that is neither mapped to
+  # an SDK method nor allowlisted with a reason, or when a mapped method no longer sends the
+  # operation's verb and path. A failed fetch fails the job too.
+  spec-drift:
+    name: SDK requests / published OpenAPI agreement
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the SDK with its test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Refresh the OpenAPI snapshot from https://api.wave.online/openapi.json
+        run: python3 scripts/refresh_openapi_snapshot.py
+
+      - name: Contract test against the refreshed snapshot
+        run: python -m pytest -q tests/test_contract_coverage.py
