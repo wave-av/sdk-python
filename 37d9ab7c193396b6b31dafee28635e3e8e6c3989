@@ -1,0 +1,56 @@
+scripts/ga/ga_evidence.py
+  s_efe86faf2558e9::t_64f31537118b8f 6-18,32-44,67-99
+  s_efe86faf2558e9::t_6416e8bf75cd50 26
+  s_efe86faf2558e9::t_708311f637b31e 52-57,66
+  s_efe86faf2558e9::t_abcce6ac581219 59
+  s_efe86faf2558e9::t_3639a5cd7f37d7 27
+  s_efe86faf2558e9::t_948c2c5270f7d1 3-5
+  s_efe86faf2558e9::t_df209a1e06c18c 19-21,23-25
+  s_efe86faf2558e9::t_220e66620621a0 28-31
+  s_efe86faf2558e9::t_1ba9af374e2981 45-47,49-51
+  s_efe86faf2558e9::t_ac5b94a6a3895f 58
+  s_efe86faf2558e9::t_e222910924e7a1 60-65
+  s_efe86faf2558e9::t_6aca53dd07c51a 100-102
+  s_5e3ffd4a21dcee::t_a0e8b378057de7 1-2,22,48,103-115
+.github/workflows/ga-evidence.yml
+  s_efe86faf2558e9::t_6f4e30a2624caa 1-99
+scripts/ga/check_ver_001.py
+  s_efe86faf2558e9::t_9a55cbd355ab26 1-26,28,31-37,53-171
+  s_efe86faf2558e9::t_276f0b69175a9a 27,29-30,38-52
+scripts/ga/ga_common.py
+  s_efe86faf2558e9::t_0903e2e37be4d0 1-164
+  s_efe86faf2558e9::t_8302259660517a 165-166
+scripts/ga/check_supply_001.py
+  s_efe86faf2558e9::t_78ca34de360c53 1-69
+.gitignore
+  s_efe86faf2558e9::t_e578340e027f29 1-10
+scripts/ga/check-SUPPLY-001.sh
+  s_efe86faf2558e9::t_dd0a341f47d46d 1-29
+scripts/ga/check-VER-001.sh
+  s_efe86faf2558e9::t_4f5df608f0e5c0 1-17,25-34
+  s_efe86faf2558e9::t_15fdd032242637 18-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "37d9ab7c193396b6b31dafee28635e3e8e6c3989",
+  "prompts": {},
+  "sessions": {
+    "s_5e3ffd4a21dcee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae4fefb55d67431b3",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    },
+    "s_efe86faf2558e9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2b6e2e9-ab55-4d57-9d9f-d57a588ae688",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}

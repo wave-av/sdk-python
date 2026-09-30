@@ -1,0 +1,125 @@
+CHANGELOG.md
+  s_73ce9d874d7339::t_41b7c3f59a9e01 9-33
+pyproject.toml
+  s_73ce9d874d7339::t_5ee950d46734eb 81
+  s_73ce9d874d7339::t_4a7570833a5882 102
+  s_73ce9d874d7339::t_87d6db03ffa0e1 7
+README.md
+  s_73ce9d874d7339::t_4fd835fc982f32 14,119
+tests/conftest.py
+  s_73ce9d874d7339::t_7b180fd7637075 12
+tests/test_contract_coverage.py
+  s_73ce9d874d7339::t_37fdcb308e1391 148
+tests/test_parity_apis.py
+  s_73ce9d874d7339::t_c8f21e6a3bb43e 12-18,227,242,244,254,267
+tests/test_readme_quickstart.py
+  s_73ce9d874d7339::t_eeb7d0e41c9722 14
+tests/test_sdk_exports.py
+  s_73ce9d874d7339::t_3988ce4f207f41 13,65,73,80,139,147,155,163,170-172,177,191
+tests/test_x402.py
+  s_73ce9d874d7339::t_f7092ed33f9aff 1,17
+wave_sdk/__init__.py
+  s_73ce9d874d7339::t_bc1cc387cd7d9d 7,13-16,19-27,30-36,39-41,44,47-62,65-66,69-70,72,108
+wave_sdk/audience.py
+  s_73ce9d874d7339::t_f9e8a69cad477f 8-9
+wave_sdk/captions.py
+  s_73ce9d874d7339::t_fb663af8a8a74b 9-10
+wave_sdk/chapters.py
+  s_73ce9d874d7339::t_5276ba7601be51 9-10
+wave_sdk/clips.py
+  s_73ce9d874d7339::t_da3659a384e0b1 14-15,82
+wave_sdk/collab.py
+  s_73ce9d874d7339::t_1664849bc13c78 8-9
+wave_sdk/connect.py
+  s_73ce9d874d7339::t_243c3368418024 8-9
+wave_sdk/creator.py
+  s_73ce9d874d7339::t_1bd60bb5b9cac6 8-9
+wave_sdk/desktop.py
+  s_73ce9d874d7339::t_4bf46880b75f3d 5-6
+wave_sdk/distribution.py
+  s_73ce9d874d7339::t_3c3b483e8597e8 8-9
+wave_sdk/drm.py
+  s_73ce9d874d7339::t_c1ebe23fc801ed 8-9
+wave_sdk/edge.py
+  s_73ce9d874d7339::t_f91061403ada25 8-9
+wave_sdk/editor.py
+  s_73ce9d874d7339::t_b4ff59e9116f0b 9-10
+wave_sdk/fleet.py
+  s_73ce9d874d7339::t_d890591112c2a2 9-10
+wave_sdk/ghost.py
+  s_73ce9d874d7339::t_b74a6b7a99f1bc 8-9
+wave_sdk/inference.py
+  s_73ce9d874d7339::t_a9a72c4874c35c 20-21
+wave_sdk/mail.py
+  s_73ce9d874d7339::t_05ad00dd936aba 15-16
+wave_sdk/marketplace.py
+  s_73ce9d874d7339::t_b482b1de63620b 8-9
+wave_sdk/mesh.py
+  s_73ce9d874d7339::t_d673cef84ffd33 8-9
+wave_sdk/meter.py
+  s_73ce9d874d7339::t_5ff821456157d9 13-14
+wave_sdk/notifications.py
+  s_73ce9d874d7339::t_9bad217141f00f 8-9
+wave_sdk/perception.py
+  s_73ce9d874d7339::t_0bcedb486e2754 25-26
+wave_sdk/phone.py
+  s_73ce9d874d7339::t_6da69f72dfbb94 9-10
+wave_sdk/pipeline.py
+  s_73ce9d874d7339::t_05f4cf8498faeb 9-10
+wave_sdk/podcast.py
+  s_73ce9d874d7339::t_b8be15f9f089a2 8-9
+wave_sdk/pricing.py
+  s_73ce9d874d7339::t_6df1b2c94e7431 15-16
+wave_sdk/prism.py
+  s_73ce9d874d7339::t_123e6af0b5204b 8-9
+wave_sdk/pulse.py
+  s_73ce9d874d7339::t_c0bae0eb4981bb 5-6
+wave_sdk/qr.py
+  s_73ce9d874d7339::t_1faf8e8fc0f90a 8-9
+wave_sdk/realtime.py
+  s_73ce9d874d7339::t_b36ca6ffa299b8 20-21
+wave_sdk/scene.py
+  s_73ce9d874d7339::t_02f7efebbd4121 9-10
+wave_sdk/search.py
+  s_73ce9d874d7339::t_07610f35c1d014 9-10
+wave_sdk/sentiment.py
+  s_73ce9d874d7339::t_7c3d440f6555ea 9-10
+wave_sdk/signage.py
+  s_73ce9d874d7339::t_76df37388d2d06 8-9
+wave_sdk/slides.py
+  s_73ce9d874d7339::t_249334f27dd993 9-10
+wave_sdk/studio.py
+  s_73ce9d874d7339::t_4b6811df80b7ce 8-9
+wave_sdk/studio_ai.py
+  s_73ce9d874d7339::t_c167c134a3d262 8-9
+wave_sdk/transcribe.py
+  s_73ce9d874d7339::t_9bcdbc4c183209 9-10
+wave_sdk/transcripts.py
+  s_73ce9d874d7339::t_d55ad1d0a65365 10-11
+wave_sdk/usb.py
+  s_73ce9d874d7339::t_a13b1392a48f68 8-9
+wave_sdk/vault.py
+  s_73ce9d874d7339::t_84136adb2290ac 8-9
+wave_sdk/voice.py
+  s_73ce9d874d7339::t_9d25f31e68b9ee 9-10
+wave_sdk/x402.py
+  s_73ce9d874d7339::t_b819b016b6a319 17
+wave_sdk/zoom.py
+  s_73ce9d874d7339::t_e4abd86a0d0d31 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "fe57a6e93674352a3d683abf53e44145de76a0aa",
+  "prompts": {},
+  "sessions": {
+    "s_73ce9d874d7339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98a8bbf9-cb78-42d8-a6f5-f3aaa2c16b46",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}

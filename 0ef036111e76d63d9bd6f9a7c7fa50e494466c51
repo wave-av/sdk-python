@@ -1,0 +1,21 @@
+.github/workflows/release.yml
+  s_73ce9d874d7339::t_7eb2dd58aaaf93 71
+  s_73ce9d874d7339::t_6547692df8de7b 1-70,72-116,118-136
+  s_73ce9d874d7339::t_8607a7ee12bce3 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "0ef036111e76d63d9bd6f9a7c7fa50e494466c51",
+  "prompts": {},
+  "sessions": {
+    "s_73ce9d874d7339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98a8bbf9-cb78-42d8-a6f5-f3aaa2c16b46",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}

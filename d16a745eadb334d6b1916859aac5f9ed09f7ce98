@@ -1,0 +1,14 @@
+.github/workflows/public-repo-guard.yml
+  h_af5ac1a9798224 195-204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "d16a745eadb334d6b1916859aac5f9ed09f7ce98",
+  "prompts": {},
+  "humans": {
+    "h_af5ac1a9798224": {
+      "author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}

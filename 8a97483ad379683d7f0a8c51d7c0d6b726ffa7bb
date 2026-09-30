@@ -1,0 +1,41 @@
+.gitignore
+  s_efe86faf2558e9::t_c820f9dc06d6b3 1-4
+.github/workflows/ga-evidence.yml
+  s_0df8ebc47b8bab::t_ef49ec9dddd515 1-110
+scripts/ga/check-SUPPLY-001.sh
+  s_0df8ebc47b8bab::t_baf319279d89d8 1-29
+scripts/ga/check-VER-001.sh
+  s_0df8ebc47b8bab::t_3b5b26ac94b68b 1-34
+scripts/ga/check_supply_001.py
+  s_0df8ebc47b8bab::t_963a8255d7dc84 1-69
+scripts/ga/check_ver_001.py
+  s_0df8ebc47b8bab::t_9c672457316ca5 1-171
+scripts/ga/ga_common.py
+  s_0df8ebc47b8bab::t_95f8142adbeb38 1-166
+scripts/ga/ga_evidence.py
+  s_0df8ebc47b8bab::t_80abb3b81a6a18 1-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "8a97483ad379683d7f0a8c51d7c0d6b726ffa7bb",
+  "prompts": {},
+  "sessions": {
+    "s_0df8ebc47b8bab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6910958cc69d6c67",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    },
+    "s_efe86faf2558e9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2b6e2e9-ab55-4d57-9d9f-d57a588ae688",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}

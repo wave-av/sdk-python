@@ -1,0 +1,14 @@
+tests/test_realtime_auth.py
+  h_af5ac1a9798224 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2f919993091697056bffef03b0109136fa38df6d",
+  "prompts": {},
+  "humans": {
+    "h_af5ac1a9798224": {
+      "author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
