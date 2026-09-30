@@ -32,8 +32,15 @@ each mapped method actually sends.
   challenge now keep the server's code, message and context instead of becoming
   `HTTP_<status>`.
 - **Retries** follow the server's `next_action`: a permanent error (for example a 503 whose
-  directive is `none`) is raised on the first attempt instead of after three backoffs, and a
-  `retry_after` directive sets the wait (capped at 60 s).
+  directive is `none`, or a 429 whose directive is not a retry) is raised on the first attempt
+  instead of after three backoffs. A `Retry-After` header or `retry_after` directive sets the
+  wait. A wait over 60 s is raised at once with the full value on the error, instead of being
+  slept through. A `Retry-After` that is not a finite, non-negative number of seconds is
+  ignored; before, `nan` or `-1` escaped as a non-`WaveError` exception.
+- **Rate limits** raise `RateLimitError` from a WebSocket upgrade too, not a plain `WaveError`.
+- **Inference** no longer sends the WAVE API key to `funnel_url`; the argument is ignored.
+- `captions.download()` returns the caption text as `content` if the API answers with the file
+  itself rather than JSON.
 - **Paths** moved to the published API operations: `podcast` uses `/v1/podcast/shows` and
   `/v1/podcast/shows/{id}/episodes`; `sentiment.analyze_text()` posts to
   `/v1/sentiment/analyze`.
@@ -66,7 +73,7 @@ These methods call paths the API does not publish and warn with `DeprecationWarn
 `captions.get_text()` (`download()`), `chapters.get_default_set()` (`list_chapters()`),
 `chapters.add_chapter()` (`create_chapter()`), `editor.render()` (`export()`),
 `collab.close_room()` (now an alias of `delete_room()`), `inference.profile()` and
-`InferenceAPI(funnel_url=...)`.
+`InferenceAPI(funnel_url=...)` (ignored).
 
 ### Changed
 

@@ -155,6 +155,27 @@ def test_rejected_upgrade_raises_the_same_error_as_rest(monkeypatch):
     assert exc.value.accepts and exc.value.accepts[0]["resource"] == "/v1/clips"
 
 
+def test_rate_limited_upgrade_raises_rate_limit_error(monkeypatch):
+    """A 429 on the upgrade is the same RateLimitError (with retry_after) a REST call raises."""
+    from wave_sdk import RateLimitError
+
+    class BadStatusError(Exception):
+        status_code = 429
+        resp_body = b'{"error": {"code": "RATE_LIMITED", "message": "too many sockets"}}'
+        resp_headers = {"content-type": "application/json", "retry-after": "5"}
+
+    def create_connection(url, header=None, **_kw):
+        raise BadStatusError("Handshake status 429")
+
+    module = types.ModuleType("websocket")
+    module.create_connection = create_connection  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "websocket", module)
+    with pytest.raises(RateLimitError) as exc:
+        _api().connect("stream:abc")
+    assert exc.value.retry_after == 5.0
+    assert exc.value.message == "too many sockets"
+
+
 def test_network_failure_on_upgrade_is_not_swallowed(monkeypatch):
     def create_connection(url, header=None, **_kw):
         raise OSError("connection refused")

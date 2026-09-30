@@ -163,6 +163,60 @@ def test_rate_limit_error_keeps_the_server_message(wave, recorder, monkeypatch):
     assert len(recorder.requests) == wave.client.max_retries + 1
 
 
+def test_a_429_is_a_rate_limit_error_wherever_it_is_parsed():
+    """The parser, not the REST loop, picks the class, so a WebSocket upgrade gets it too."""
+    err = error_from_response(httpx.Response(429, json={"error": "slow down"}, headers={"retry-after": "4"}))
+    assert isinstance(err, RateLimitError)
+    assert err.message == "slow down"
+    assert err.retry_after == 4.0
+    bare = error_from_response(httpx.Response(429))
+    assert isinstance(bare, RateLimitError) and bare.message == "Rate limit exceeded" and bare.retry_after == 1.0
+
+
+def test_a_permanent_429_is_not_retried(wave, recorder):
+    """A 429 whose directive is not a retry (here: a plan limit) is raised on the first attempt."""
+    body = {"error": {"code": "PLAN_LIMIT", "message": "monthly cap reached", "next_action": {"type": "upgrade_plan"}}}
+    recorder.set(lambda _r: httpx.Response(429, json=body, headers={"retry-after": "1"}))
+    with pytest.raises(RateLimitError) as exc:
+        wave.client.get("/v1/anything")
+    assert exc.value.retryable is False
+    assert len(recorder.requests) == 1
+
+
+def test_a_long_retry_after_is_raised_not_slept_through(wave, recorder):
+    """Retry-After: 86400 used to become time.sleep(86400). It is raised at once with the full wait."""
+    recorder.set(lambda _r: httpx.Response(429, json={"error": {"code": "RATE_LIMITED", "message": "m"}}, headers={"retry-after": "86400"}))
+    with pytest.raises(RateLimitError) as exc:
+        wave.client.get("/v1/anything")
+    assert exc.value.retry_after == 86400.0
+    assert len(recorder.requests) == 1
+
+
+def test_a_long_retry_after_directive_is_raised_not_slept_through(wave, recorder):
+    busy = {"error": {"code": "BUSY", "message": "m", "next_action": {"type": "retry_after", "seconds": 3600}}}
+    recorder.set(lambda _r: httpx.Response(503, json=busy))
+    with pytest.raises(WaveError) as exc:
+        wave.client.get("/v1/anything")
+    assert exc.value.retry_after_hint == 3600.0
+    assert len(recorder.requests) == 1
+
+
+@pytest.mark.parametrize("header", ["nan", "inf", "-1", "Wed, 21 Oct 2026 07:28:00 GMT", "soon"])
+def test_an_unusable_retry_after_header_falls_back(wave, recorder, monkeypatch, header):
+    """nan / inf / negative values reached time.sleep() and escaped as ValueError or OverflowError."""
+    sleeps: list[float] = []
+    monkeypatch.setattr("wave_sdk.client.time.sleep", sleeps.append)
+    replies = iter([httpx.Response(429, headers={"retry-after": header}), httpx.Response(200, json={"ok": True})])
+    recorder.set(lambda _r: next(replies))
+    assert wave.client.get("/v1/anything") == {"ok": True}
+    assert sleeps == [1.0]
+
+
+def test_a_non_finite_directive_is_ignored():
+    err = error_from_response(httpx.Response(503, content=b'{"error": {"code": "BUSY", "message": "m", "next_action": {"type": "retry_after", "seconds": Infinity}}}', headers={"content-type": "application/json"}))
+    assert err.retry_after_hint is None
+
+
 # --- the README's error-handling example --------------------------------------------------------
 
 

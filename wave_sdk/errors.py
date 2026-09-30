@@ -5,6 +5,7 @@ keeps working.
 """
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import httpx
@@ -76,19 +77,47 @@ class WaveError(Exception):
     @property
     def retry_after_hint(self) -> float | None:
         """Seconds to wait from a ``{"type": "retry_after", "seconds": N}`` directive, if any."""
-        if not isinstance(self.next_action, dict) or self.next_action.get("type") != "retry_after":
-            return None
-        seconds = self.next_action.get("seconds")
-        if isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds >= 0:
-            return float(seconds)
-        return None
+        return _retry_after_directive(self.next_action)
 
     def __str__(self) -> str:
         return f"WaveError({self.code}): {self.message}"
 
 
+def _wait_seconds(value: Any) -> float | None:
+    """A usable wait: a finite, non-negative number (bools, NaN and infinities are rejected)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if math.isfinite(value) and value >= 0 else None
+
+
+def _retry_after_directive(next_action: Any) -> float | None:
+    if not isinstance(next_action, dict) or next_action.get("type") != "retry_after":
+        return None
+    return _wait_seconds(next_action.get("seconds"))
+
+
+def retry_after_seconds(response: httpx.Response, next_action: Any = None) -> float:
+    """How long the server asked the caller to wait before retrying.
+
+    A numeric ``Retry-After`` header wins, then the body's ``retry_after`` directive, then 1 s. A
+    header that is not a finite, non-negative number of seconds (an HTTP date, ``nan``, ``-1``)
+    is ignored. The value is not capped here; the client decides whether a wait is too long to
+    retry on its own.
+    """
+    header = response.headers.get("retry-after")
+    if header:
+        try:
+            parsed = _wait_seconds(float(header))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            return parsed
+    directive = _retry_after_directive(next_action)
+    return directive if directive is not None else 1.0
+
+
 class RateLimitError(WaveError):
-    """Rate limit exceeded error."""
+    """HTTP 429. ``retry_after`` is the wait the server asked for, in seconds."""
 
     def __init__(
         self,
@@ -210,15 +239,16 @@ def error_from_response(response: httpx.Response) -> WaveError:
     Anything else (a non-JSON body) falls back to code ``HTTP_<status>``.
     """
     status = response.status_code
+    fallback_message = f"HTTP {status}: {response.reason_phrase}"
     fields: dict[str, Any] = {
         "code": f"HTTP_{status}",
-        "message": f"HTTP {status}: {response.reason_phrase}",
+        "message": fallback_message,
         "details": None, "next_action": None, "suggestions": None, "doc_url": None,
         "request_id": None, "accepts": None, "x402_version": None,
     }
     try:
         body = response.json()
-    except Exception:
+    except ValueError:  # not JSON (JSONDecodeError), or not text (UnicodeDecodeError)
         body = None
 
     if isinstance(body, dict):
@@ -236,6 +266,15 @@ def error_from_response(response: httpx.Response) -> WaveError:
         "suggestions": fields["suggestions"],
         "doc_url": fields["doc_url"],
     }
+    if status == 429:
+        # One class for a 429 wherever it comes from (a REST call or a WebSocket upgrade).
+        return RateLimitError(
+            message if message != fallback_message else "Rate limit exceeded",
+            retry_after_seconds(response, fields["next_action"]),
+            request_id,
+            details=details,
+            **common,
+        )
     if status == 402:
         return PaymentRequiredError(
             message, code, request_id, details,

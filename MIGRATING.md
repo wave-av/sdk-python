@@ -1,7 +1,8 @@
 # Migrating to `wave-sdk` 2.3.0
 
-2.3.0 moves methods onto the paths the WAVE API publishes. Old names keep working and emit a
-`DeprecationWarning`, so nothing breaks on upgrade; switch when convenient.
+2.3.0 moves methods onto the paths the WAVE API publishes. The old method names in the table
+below keep working and emit a `DeprecationWarning`; switch when convenient. The changes listed
+after the table can require edits to existing code.
 
 | Before (2.2.0)                                  | 2.3.0                                                     |
 | ----------------------------------------------- | --------------------------------------------------------- |
@@ -13,9 +14,9 @@
 | `editor.render(project_id)`                     | `editor.export(project_id)`                               |
 | `collab.close_room(room_id)`                    | `collab.delete_room(room_id)`                             |
 | `inference.profile(model_id)`                   | `inference.models()`                                      |
-| `InferenceAPI(client, funnel_url=...)`          | `InferenceAPI(client)`: completions go through `api.wave.online` |
+| `InferenceAPI(client, funnel_url=...)`          | `InferenceAPI(client)`: `funnel_url` is now ignored; completions go through `api.wave.online` |
 
-Three changes can affect existing code:
+Changes that can require edits:
 
 - `podcast.create(title, description, category)` is now `podcast.create(name, description=None,
   category=None, ...)`, and `podcast.create_episode()` requires `audio_url=`. Positional calls
@@ -26,6 +27,10 @@ Three changes can affect existing code:
   `RouteNotServedError`. Errors whose body the old parser could not read, which surfaced as
   `code="HTTP_402"` or `"HTTP_405"`, now carry the server's code and message. Both classes
   subclass `WaveError`, so existing `except WaveError` blocks still catch them.
+- Retries follow the server. An error whose `next_action` says a retry cannot help (including a
+  429 or 5xx) is raised on the first attempt, and a 429 or `retry_after` directive asking for
+  more than 60 seconds is raised at once with the full wait on the error
+  (`RateLimitError.retry_after`) instead of being slept through.
 
 ---
 

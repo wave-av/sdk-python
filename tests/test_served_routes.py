@@ -156,8 +156,17 @@ def test_voice_generate_returns_json_or_audio(wave, recorder):
 
 
 def test_captions_download(wave, recorder):
-    wave.captions.download("job_1", language="en", format="vtt")
+    recorder.set(lambda _r: httpx.Response(200, json={"url": "https://cdn.example.com/c.vtt"}))
+    assert wave.captions.download("job_1", language="en", format="vtt") == {"url": "https://cdn.example.com/c.vtt"}
     assert sent(recorder) == ("GET", "/v1/captions/job_1/download?language=en&format=vtt")
+
+
+def test_captions_download_keeps_a_file_body(wave, recorder):
+    """If the API answers with the caption file itself, its text is returned, not dropped."""
+    vtt = "WEBVTT\n\n00:00.000 --> 00:01.000\nhello\n"
+    recorder.set(lambda _r: httpx.Response(200, text=vtt, headers={"content-type": "text/vtt; charset=utf-8"}))
+    result = wave.captions.download("job_1", language="en", format="vtt")
+    assert result == {"content": vtt, "content_type": "text/vtt; charset=utf-8"}
 
 
 def test_chapters_per_video_operations(wave, recorder):

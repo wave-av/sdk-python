@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import warnings
 from typing import Any, Literal
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel, ConfigDict
@@ -77,20 +78,21 @@ class ModelProfile(BaseModel):
 class InferenceAPI:
     """Inference API - one completion call through the gateway, plus the model list.
 
-    ``funnel_url`` is deprecated: it posts completions straight to a proxy that does not accept
-    WAVE API keys. Leave it unset to go through ``https://api.wave.online``.
+    ``funnel_url`` is deprecated and ignored. It used to send completions, with the WAVE API key,
+    straight to a proxy that does not accept WAVE API keys. Every completion now goes through the
+    client's own host (``https://api.wave.online`` by default), so the key is never sent anywhere
+    else.
     """
 
     def __init__(self, client: WaveClient, funnel_url: str | None = None, registry_url: str | None = None, registry_key: str | None = None):
         self._client = client
         if funnel_url is not None:
             warnings.warn(
-                "InferenceAPI(funnel_url=...) is deprecated: completions go through the API gateway "
-                f"({_COMPLETIONS_PATH}), which accepts your WAVE API key. Leave funnel_url unset.",
+                "InferenceAPI(funnel_url=...) is deprecated and ignored: completions go through the "
+                f"API gateway ({_COMPLETIONS_PATH}), which accepts your WAVE API key.",
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self._funnel_url = funnel_url.rstrip("/") if funnel_url else None
         self._registry_url = (registry_url or "").rstrip("/")
         self._registry_key = registry_key or ""
 
@@ -98,10 +100,7 @@ class InferenceAPI:
         """One completion. ``POST /v1/inference/chat/completions``; raises WaveError on HTTP errors."""
         msgs = [m.model_dump() if isinstance(m, InferenceMessage) else m for m in messages]
         body = {"model": model, "messages": msgs, "max_tokens": max_tokens}
-        if self._funnel_url:
-            data = self._legacy_funnel_post(body)
-        else:
-            data = self._client.post(_COMPLETIONS_PATH, json=body, timeout=120.0)
+        data = self._client.post(_COMPLETIONS_PATH, json=body, timeout=120.0)
         data = data if isinstance(data, dict) else {}
         usage = data.get("usage") or {}
         choices = data.get("choices") or [{}]
@@ -127,12 +126,14 @@ class InferenceAPI:
             DeprecationWarning,
             stacklevel=2,
         )
-        rows = self._registry_get(f"/rest/v1/models?select=*&id=eq.{model_id}")
+        # Encoded so a model id cannot add filters of its own to the registry query.
+        mid = quote(model_id, safe="")
+        rows = self._registry_get(f"/rest/v1/models?select=*&id=eq.{mid}")
         if not rows:
             raise WaveError(f"model {model_id}: NOT ADMITTED", "MODEL_NOT_FOUND", 404)
         row = rows[0]
         health = row.get("health") or {}
-        usage = self._registry_get(f"/rest/v1/usage_logs?select=cost,latency_ms&model_id=eq.{model_id}&limit=1000")
+        usage = self._registry_get(f"/rest/v1/usage_logs?select=cost,latency_ms&model_id=eq.{mid}&limit=1000")
         latencies = [float(u["latency_ms"]) for u in usage if u.get("latency_ms") is not None and float(u["latency_ms"]) > 0]
         return ModelProfile(
             id=row["id"],
@@ -146,17 +147,6 @@ class InferenceAPI:
                 avg_latency_ms=(sum(latencies) / len(latencies)) if latencies else None,
             ),
         )
-
-    def _legacy_funnel_post(self, body: dict[str, Any]) -> Any:
-        response = httpx.post(
-            f"{self._funnel_url}/v1/chat/completions",
-            headers={"content-type": "application/json", "authorization": f"Bearer {self._client.api_key}"},
-            json=body,
-            timeout=120.0,
-        )
-        if not response.is_success:
-            raise WaveError(f"inference {response.status_code}: {response.text[:300]}", "INFERENCE_ERROR", response.status_code)
-        return response.json()
 
     def _registry_get(self, path: str) -> list[dict[str, Any]]:
         if not self._registry_url:

@@ -44,7 +44,8 @@ __version__ = "2.3.0"
 
 T = TypeVar("T")
 
-# Longest server-suggested wait the client honours before retrying on its own.
+# Longest server-requested wait the client sleeps through before retrying on its own. A longer
+# request is raised to the caller at once (with the full wait on the error) instead of sleeping.
 _MAX_SERVER_RETRY_AFTER = 60.0
 
 
@@ -203,34 +204,11 @@ class WaveClient:
                     **kwargs,
                 )
 
-                # Handle rate limiting
-                if response.status_code == 429:
-                    parsed = self._parse_error(response)
-                    retry_after = self._parse_retry_after(response, parsed)
-                    if attempt < max_retries:
-                        logger.warning(f"Rate limited. Retrying in {retry_after}s")
-                        time.sleep(retry_after)
-                        continue
-                    raise RateLimitError(
-                        parsed.message if parsed.code != "HTTP_429" else "Rate limit exceeded",
-                        retry_after,
-                        parsed.request_id,
-                        details=parsed.details,
-                        next_action=parsed.next_action,
-                        suggestions=parsed.suggestions,
-                        doc_url=parsed.doc_url,
-                    )
-
-                # Handle errors
+                # Handle errors (a 429 parses to RateLimitError)
                 if not response.is_success:
                     error = self._parse_error(response)
-                    if error.retryable and attempt < max_retries:
-                        hint = error.retry_after_hint
-                        delay = (
-                            min(hint, _MAX_SERVER_RETRY_AFTER)
-                            if hint is not None
-                            else self._calculate_backoff(attempt)
-                        )
+                    delay = self._retry_delay(error, attempt)
+                    if delay is not None and attempt < max_retries:
                         logger.warning(f"Request failed ({error.code}). Retrying in {delay}s")
                         time.sleep(delay)
                         continue
@@ -264,18 +242,19 @@ class WaveClient:
         """Parse an error response into the most specific WaveError subclass."""
         return error_from_response(response)
 
-    def _parse_retry_after(self, response: httpx.Response, error: WaveError | None = None) -> float:
-        """Seconds to wait: the Retry-After header, else the body's retry_after directive, else 1s."""
-        retry_after = response.headers.get("retry-after")
-        if retry_after:
-            try:
-                return float(retry_after)
-            except ValueError:
-                pass
-        hint = error.retry_after_hint if error is not None else None
-        if hint is not None:
-            return min(hint, _MAX_SERVER_RETRY_AFTER)
-        return 1.0
+    def _retry_delay(self, error: WaveError, attempt: int) -> float | None:
+        """Seconds to sleep before retrying ``error``, or None to raise it now.
+
+        None when the server's ``next_action`` says a retry cannot help, and when the server
+        asked for a longer wait than ``_MAX_SERVER_RETRY_AFTER`` (sleeping a capped time and
+        retrying early would only be refused again; the caller gets the full wait on the error).
+        """
+        if not error.retryable:
+            return None
+        wait = error.retry_after if isinstance(error, RateLimitError) else error.retry_after_hint
+        if wait is None:
+            return self._calculate_backoff(attempt)
+        return wait if wait <= _MAX_SERVER_RETRY_AFTER else None
 
     def _calculate_backoff(self, attempt: int) -> float:
         """Calculate exponential backoff delay."""

@@ -6,6 +6,7 @@ import warnings
 from typing import Any, Literal
 from urllib.parse import quote
 
+import httpx
 from pydantic import BaseModel
 
 from wave_sdk.client import WaveClient
@@ -39,9 +40,14 @@ class CaptionsAPI:
         """Download a finished caption track. ``GET /v1/captions/{jobId}/download``.
 
         Returns ``{"url": ..., "content": ...}``: a download URL and/or the caption text inline.
+        The published response is JSON; if the API answers with the caption file itself (for
+        example ``text/vtt``), its text is returned as ``content``, with ``content_type`` set.
         """
-        result: dict[str, Any] = self._client.get(f"{self._base}/{quote(job_id, safe=':')}/download", params={"language": language, "format": format})
-        return result
+        response: httpx.Response = self._client.get(f"{self._base}/{quote(job_id, safe=':')}/download", params={"language": language, "format": format}, raw=True)
+        if response.headers.get("content-type", "").startswith("application/json"):
+            result: dict[str, Any] = response.json()
+            return result
+        return {"content": response.text, "content_type": response.headers.get("content-type")}
     def get_text(self, caption_id: str, include_speakers: bool = False) -> dict:
         """Deprecated: calls ``/v1/captions/{id}/text``, which the API does not serve. Use :meth:`download`."""
         warnings.warn("captions.get_text() calls a route the API does not serve; use captions.download(job_id, language, format='txt')", DeprecationWarning, stacklevel=2)

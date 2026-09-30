@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import httpx
 import pytest
 
 from wave_sdk.inference import InferenceAPI
@@ -239,20 +238,17 @@ def test_inference_complete_never_leaves_the_gateway(monkeypatch, mock_client):
     InferenceAPI(mock_client).complete("m", [{"role": "user", "content": "hi"}])
 
 
-def test_inference_legacy_funnel_url_is_deprecated(monkeypatch):
-    class FakeClient:
-        api_key = "test-key"
+def test_inference_funnel_url_is_deprecated_and_never_receives_the_key(monkeypatch, mock_client):
+    """funnel_url used to get the WAVE key in an Authorization header; it is now ignored."""
+    def boom(*_a, **_k):
+        raise AssertionError("the WAVE key was sent to funnel_url")
 
-    def fake_post(url, headers=None, json=None, timeout=None):
-        assert url == "https://funnel.example.com/v1/chat/completions"
-        return httpx.Response(500, text="down")
-
-    monkeypatch.setattr("wave_sdk.inference.httpx.post", fake_post)
+    monkeypatch.setattr("wave_sdk.inference.httpx.post", boom)
     with pytest.warns(DeprecationWarning, match="funnel_url"):
-        api = InferenceAPI(FakeClient(), funnel_url="https://funnel.example.com")
-    from wave_sdk.client import WaveError
-    with pytest.raises(WaveError):
-        api.complete("claude-haiku", [{"role": "user", "content": "hi"}])
+        api = InferenceAPI(mock_client, funnel_url="http://funnel.example.com")
+    mock_client.post.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    assert api.complete("m", [{"role": "user", "content": "hi"}]).content == "ok"
+    assert mock_client.post.call_args.args[0] == "/v1/inference/chat/completions"
 
 
 def test_inference_models_reads_the_gateway_list(mock_client):
