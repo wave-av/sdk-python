@@ -145,6 +145,8 @@ peers_b = client.mesh.list_peers(node="studio-b")  # any method takes node= for 
 ```
 
 Every mesh method, mutations included, raises `ValueError` before sending when no node is set.
+A per-call `node=` always overrides `client.mesh.node`, so an empty or blank `node=""` raises
+rather than falling back to the default node.
 The mutations (`add_peer`, `remove_peer`, `create_policy`, `trigger_failover`) are sent once and
 never retried automatically.
 

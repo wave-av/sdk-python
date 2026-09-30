@@ -5,7 +5,8 @@ is made for (a target selector the server scopes to your organization, not a cre
 once with ``client.mesh.node = "studio-a"`` (or ``MeshAPI(client, node=...)``), or pass ``node=``
 to any method for one call. Every method, reads and mutations alike, builds the header before it
 sends anything: a call without a node raises ``ValueError`` locally instead of a 400 from the
-server, and so does a node name containing a line break.
+server, and so does a node name containing a line break. A per-call ``node=`` always wins over the
+client default, so an empty or blank ``node=""`` raises rather than silently using the default.
 
 ``list_peers()`` (``GET /v1/mesh/peers``) is served. The region / policy / replication /
 topology methods predate the current mesh API and are answered 404 by it today; they raise
@@ -45,10 +46,13 @@ class MeshAPI:
         self.node = node
 
     def _headers(self, node: str | None = None) -> dict[str, str]:
-        name = node or self.node
-        if not name:
+        # Fall back to the client default only when no override was passed. An explicit override
+        # that is empty (an unset config value, say) is an error, not a request to use whatever
+        # node the client happens to default to: that would read from or mutate the wrong node.
+        name = self.node if node is None else node
+        if name is None or (isinstance(name, str) and not name.strip()):
             raise ValueError(
-                "WAVE mesh: every /v1/mesh request needs an x-wave-node target; "
+                "WAVE mesh: every /v1/mesh request needs a non-empty x-wave-node target; "
                 "set client.mesh.node = '<node-name>' or pass node='<node-name>'"
             )
         if not isinstance(name, str) or "\r" in name or "\n" in name:

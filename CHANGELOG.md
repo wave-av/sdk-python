@@ -60,7 +60,8 @@ each mapped method actually sends.
   `/v1/sentiment/analyze`.
 - **Mesh** requests carry the required `x-wave-node` header (`client.mesh.node`, or `node=` on
   any method, mutations included); a call without one, or with a multi-line node name, raises
-  `ValueError` before sending. Mesh ids are encoded as one path segment, and the mutations
+  `ValueError` before sending. A per-call `node=` always wins, so `node=""` (or a blank name)
+  raises instead of silently using the client default. Mesh ids are encoded as one path segment, and the mutations
   (`add_peer`, `remove_peer`, `create_policy`, `trigger_failover`) are sent once rather than
   retried, so a 5xx after the server applied the change cannot fail over twice.
 - **Path safety**: every request whose path contains a `.` or `..` segment raises `ValueError`

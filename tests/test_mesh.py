@@ -96,6 +96,33 @@ def test_mesh_reads_are_still_retried(wave, recorder, monkeypatch):
     assert len(recorder.requests) == 2
 
 
+@pytest.mark.parametrize("method, args, route", MESH_CALLS, ids=[c[0] for c in MESH_CALLS])
+@pytest.mark.parametrize("override", ["", "   "], ids=["empty", "blank"])
+def test_an_empty_override_never_falls_back_to_the_default_node(wave, recorder, method, args, route, override):
+    """``node=""`` with a client default set must raise, not quietly target the default node: a
+    multi-node caller whose config value came back empty would otherwise read from, or mutate,
+    the wrong node."""
+    recorder.set(lambda _r: httpx.Response(200, json={}))
+    wave.mesh.node = "studio-a"
+    with pytest.raises(ValueError, match="x-wave-node"):
+        getattr(wave.mesh, method)(*args, node=override)
+    assert recorder.requests == []
+
+
+def test_node_none_means_use_the_default(wave, recorder):
+    recorder.set(lambda _r: live_response("mesh_peers"))
+    wave.mesh.node = "studio-a"
+    wave.mesh.list_peers(node=None)
+    assert recorder.last.headers["x-wave-node"] == "studio-a"
+
+
+def test_a_blank_default_node_is_rejected(wave, recorder):
+    wave.mesh.node = "  "
+    with pytest.raises(ValueError, match="x-wave-node"):
+        wave.mesh.list_peers()
+    assert recorder.requests == []
+
+
 @pytest.mark.parametrize("node", ["studio-a\r\nx-evil: 1", "studio\n"])
 def test_mesh_rejects_a_multi_line_node_name(wave, recorder, node):
     with pytest.raises(ValueError, match="single-line"):
