@@ -4,11 +4,10 @@ from __future__ import annotations
 import time
 import warnings
 from typing import Any, Literal
-from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 class EditorProject(BaseModel):
@@ -50,7 +49,8 @@ class EditorAPI:
     def export(self, project_id: str, format: Literal["mp4", "webm", "mov"] | None = None, resolution: str | None = None, quality: Literal["low", "medium", "high", "ultra"] | None = None) -> dict[str, Any]:
         """Render a project to a file. ``POST /v1/editor/projects/{projectId}/export`` -> an export job (HTTP 202)."""
         body = {"format": format, "resolution": resolution, "quality": quality}
-        result: dict[str, Any] = self._client.post(f"{self._base}/{quote(project_id, safe=':')}/export", json={k: v for k, v in body.items() if v is not None})
+        # Sent once (billed): a retry after the API accepted the export would render it twice.
+        result: dict[str, Any] = self._client.post(f"{self._base}/{path_segment(project_id)}/export", json={k: v for k, v in body.items() if v is not None}, no_retry=True)
         return result
     def render(self, project_id: str, **kwargs: Any) -> RenderJob:
         """Deprecated: calls ``.../render``; the published API operation is ``.../export``. Use :meth:`export`."""

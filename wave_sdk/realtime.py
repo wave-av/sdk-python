@@ -23,11 +23,11 @@ import contextlib
 import json
 from collections.abc import Iterator
 from typing import Any, Callable
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode, urlsplit
 
 import httpx
 
-from wave_sdk.client import WaveClient, WaveError, __version__, error_from_response
+from wave_sdk.client import WaveClient, WaveError, __version__, error_from_response, path_segment
 
 _DEFAULT_WS = "wss://api.wave.online"
 _CONNECT_PATH = "/v1/realtime/connect"
@@ -44,14 +44,31 @@ def _ws_origin(http_url: str) -> str:
     return base
 
 
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _require_tls(ws_base: str) -> None:
+    """The upgrade carries the API key, so it must be encrypted: ``wss://``, or ``ws://`` to a
+    loopback host only (a local development server)."""
+    parts = urlsplit(ws_base)
+    if parts.scheme == "wss":
+        return
+    if parts.scheme == "ws" and (parts.hostname or "") in _LOOPBACK_HOSTS:
+        return
+    raise ValueError(
+        f"WAVE realtime: refusing to send the API key to {parts.scheme or '?'}://{parts.hostname or ws_base}; "
+        "use a wss:// origin (ws:// is allowed only for localhost)"
+    )
+
+
 def _channel_path(channel: str) -> str:
     """Percent-encode a channel for use as a single REST path segment.
 
     ``:`` stays literal because WAVE channel names are ``stream:abc`` shaped (the API answers
     404 for ``stream%3Aabc``); everything else that could leave the segment (``/``, ``?``, ``#``,
-    ``&``) is encoded.
+    ``&``) is encoded, and an empty or ``.``/``..`` channel raises ``ValueError``.
     """
-    return quote(channel, safe=":")
+    return path_segment(channel)
 
 
 def _handshake_error(exc: Exception) -> WaveError | None:
@@ -107,6 +124,7 @@ class RealtimeChannel:
         if organization_id:
             headers.append(f"X-Organization-Id: {organization_id}")
 
+        _require_tls(ws_base)
         url = f"{ws_base.rstrip('/')}{_CONNECT_PATH}?{urlencode(params)}"
         try:
             self._ws = websocket.create_connection(url, header=headers)
@@ -182,8 +200,12 @@ class RealtimeAPI:
 
     def publish(self, channel: str, event: str, data: Any = None) -> dict[str, Any]:
         """``POST /v1/realtime/channels/{channel}/publish`` (scope ``realtime:write``)."""
+        # Sent once: a publish the API accepted before a timeout or bare 5xx would otherwise be
+        # broadcast twice. The caller decides whether to retry.
         result: dict[str, Any] = self._client.post(
-            f"{_CHANNELS_PATH}/{_channel_path(channel)}/publish", json={"event": event, "data": data}
+            f"{_CHANNELS_PATH}/{_channel_path(channel)}/publish",
+            json={"event": event, "data": data},
+            no_retry=True,
         )
         return result
 

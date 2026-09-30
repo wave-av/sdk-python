@@ -100,10 +100,17 @@ class InferenceAPI:
         """One completion. ``POST /v1/inference/chat/completions``; raises WaveError on HTTP errors."""
         msgs = [m.model_dump() if isinstance(m, InferenceMessage) else m for m in messages]
         body = {"model": model, "messages": msgs, "max_tokens": max_tokens}
-        data = self._client.post(_COMPLETIONS_PATH, json=body, timeout=120.0)
-        data = data if isinstance(data, dict) else {}
+        # Sent once: a completion is billed per token, and a retry after the gateway accepted it
+        # (a timeout, a bare 5xx) would bill it twice. The caller decides whether to retry.
+        data = self._client.post(_COMPLETIONS_PATH, json=body, timeout=120.0, no_retry=True)
+        choices = data.get("choices") if isinstance(data, dict) else None
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise WaveError(
+                f"inference: {_COMPLETIONS_PATH} answered 2xx without any choices",
+                "INVALID_RESPONSE",
+                200,
+            )
         usage = data.get("usage") or {}
-        choices = data.get("choices") or [{}]
         return InferenceResult(
             model=data.get("model") or model,
             content=(choices[0].get("message") or {}).get("content") or "",
@@ -114,8 +121,14 @@ class InferenceAPI:
     def models(self) -> list[InferenceModel]:
         """Models the gateway will dispatch to. ``GET /v1/inference/models``."""
         data = self._client.get(_MODELS_PATH)
-        rows = data.get("data") if isinstance(data, dict) else data
-        return [InferenceModel(**r) for r in (rows or []) if isinstance(r, dict)]
+        rows = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+            raise WaveError(
+                f"inference: {_MODELS_PATH} answered 2xx without a model list",
+                "INVALID_RESPONSE",
+                200,
+            )
+        return [InferenceModel(**r) for r in rows]
 
     def profile(self, model_id: str) -> ModelProfile:
         """Deprecated. A model's measured profile read straight from the registry; requires

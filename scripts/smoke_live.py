@@ -19,7 +19,8 @@ Each check says what it expects:
 A GET to ``/v1/network/surface`` runs first as a control: a route that is known to be served. If it
 fails, the key or the network is at fault, and no other result means anything.
 
-Exit status: 0 when every check matches its expectation, 1 otherwise, 2 when WAVE_API_KEY is unset.
+Exit status: 0 when every check matches its expectation, 1 otherwise, 2 when WAVE_API_KEY is unset
+or WAVE_BASE_URL is not https:// (http:// is accepted for localhost only).
 """
 from __future__ import annotations
 
@@ -27,18 +28,36 @@ import os
 import sys
 import time
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 from wave_sdk import PaymentRequiredError, RouteNotServedError, Wave, WaveError
 
 Check = tuple[str, Callable[[Wave], Any], Any]
+_LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
-# x-request-id of the most recent HTTP response, so a 200 line carries the same receipt an error does.
+# Status and x-request-id of the most recent HTTP response, so a 200 line carries the same receipt
+# an error does and "200" means exactly 200 (not any 2xx).
 _LAST_RID: dict[str, str] = {}
 
 
 def _remember_request_id(response: Any) -> None:
     _LAST_RID["rid"] = response.headers.get("x-request-id") or "-"
+    _LAST_RID["status"] = str(response.status_code)
+
+
+def _safe_summary(exc: Exception) -> str:
+    """Describe a non-WaveError failure without echoing response data: a pydantic
+    ValidationError's str() includes the offending input value, so only locations and types."""
+    errors = getattr(exc, "errors", None)
+    if callable(errors):
+        try:
+            items = errors(include_input=False)
+        except TypeError:
+            items = errors()
+        locs = ", ".join(f"{'.'.join(str(p) for p in e.get('loc', ()))}:{e.get('type')}" for e in items[:5])
+        return f"{type(exc).__name__}: {len(items)} error(s) at {locs}"
+    return type(exc).__name__
 
 
 def _request_id(obj: Any) -> str:
@@ -82,7 +101,7 @@ def _outcome_matches(expected: Any, result: Any, error: WaveError | None) -> boo
     if isinstance(expected, list):  # any one of several acceptable outcomes
         return any(_outcome_matches(e, result, error) for e in expected)
     if expected == 200:
-        return error is None
+        return error is None and _LAST_RID.get("status") == "200"
     cls, code = expected
     return isinstance(error, cls) and error.code == code
 
@@ -92,7 +111,7 @@ def _describe(result: Any, error: WaveError | None, elapsed: float) -> str:
         kind = type(error).__name__
         return f"{kind} {error.status_code} {error.code} rid={_request_id(error)} ({elapsed:.1f}s)"
     shape = type(result).__name__
-    return f"200 -> {shape} rid={_LAST_RID.get('rid', '-')} ({elapsed:.1f}s)"
+    return f"{_LAST_RID.get('status', '?')} -> {shape} rid={_LAST_RID.get('rid', '-')} ({elapsed:.1f}s)"
 
 
 def _run(wave: Wave, name: str, fn: Callable[[Wave], Any], expected: Any) -> bool:
@@ -105,7 +124,7 @@ def _run(wave: Wave, name: str, fn: Callable[[Wave], Any], expected: Any) -> boo
     except WaveError as exc:
         error = exc
     except Exception as exc:  # a parsing or transport failure is a failed check, not a crash
-        print(f"FAIL  {name}: {type(exc).__name__}: {str(exc)[:200]}")
+        print(f"FAIL  {name}: {_safe_summary(exc)} rid={_LAST_RID.get('rid', '-')}")
         return False
     ok = _outcome_matches(expected, result, error)
     print(f"{'PASS' if ok else 'FAIL'}  {name}: {_describe(result, error, time.monotonic() - started)}")
@@ -126,7 +145,7 @@ def _websocket_check(wave: Wave) -> bool | None:
         print(f"FAIL  realtime.connect: {_describe(None, exc, time.monotonic() - started)}")
         return False
     except Exception as exc:
-        print(f"FAIL  realtime.connect: {type(exc).__name__}: {str(exc)[:200]}")
+        print(f"FAIL  realtime.connect: {_safe_summary(exc)}")
         return False
     channel.close()
     print(f"PASS  realtime.connect: upgraded and closed ({time.monotonic() - started:.1f}s)")
@@ -135,7 +154,9 @@ def _websocket_check(wave: Wave) -> bool | None:
 
 def _report_known_server_gaps(wave: Wave) -> None:
     """Informational: flows whose SDK request matches the published API but that the server does
-    not answer yet. They are printed, not scored, so a server-side fix shows up here first."""
+    not answer yet. They are printed, not scored, so a server-side fix shows up here first. Any
+    WaveError is reported rather than failing the run on purpose: the key, the network and the
+    parser are already proven by the scored checks, and these routes' answers are server state."""
     probes: list[tuple[str, Callable[[Wave], Any]]] = [
         ("pipeline.list", lambda w: w.pipeline.list()),
         ("podcast.list", lambda w: w.podcast.list()),
@@ -145,9 +166,11 @@ def _report_known_server_gaps(wave: Wave) -> None:
         started = time.monotonic()
         try:
             fn(wave)
-            print(f"INFO  {name}: 200 ({time.monotonic() - started:.1f}s)")
-        except (RouteNotServedError, PaymentRequiredError, WaveError) as exc:
+            print(f"INFO  {name}: {_LAST_RID.get('status', '?')} rid={_LAST_RID.get('rid', '-')} ({time.monotonic() - started:.1f}s)")
+        except (RouteNotServedError, PaymentRequiredError) as exc:
             print(f"INFO  {name}: {_describe(None, exc, time.monotonic() - started)}")
+        except WaveError as exc:  # a different answer than the known gap: shown, flagged, not scored
+            print(f"WARN  {name}: {_describe(None, exc, time.monotonic() - started)} (not the known gap)")
 
 
 def main() -> int:
@@ -156,6 +179,10 @@ def main() -> int:
         print("WAVE_API_KEY is not set", file=sys.stderr)
         return 2
     base_url = os.environ.get("WAVE_BASE_URL", "https://api.wave.online")
+    parts = urlsplit(base_url)
+    if parts.scheme != "https" and not (parts.scheme == "http" and parts.hostname in _LOOPBACK):
+        print("WAVE_BASE_URL must be https:// (http:// only for localhost): the key is sent to it", file=sys.stderr)
+        return 2
     wave = Wave(api_key=api_key, base_url=base_url, max_retries=0)
     wave.client._client.event_hooks["response"].append(_remember_request_id)
     print(f"wave-sdk live smoke against {base_url}")

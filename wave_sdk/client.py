@@ -10,6 +10,7 @@ import logging
 import random
 import time
 from typing import Any, Generic, TypeVar
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel
@@ -22,6 +23,7 @@ from wave_sdk.errors import (
     RouteNotServedError,
     WaveError,
     error_from_response,
+    retry_after_header,
 )
 
 __all__ = [
@@ -47,6 +49,42 @@ T = TypeVar("T")
 # Longest server-requested wait the client sleeps through before retrying on its own. A longer
 # request is raised to the caller at once (with the full wait on the error) instead of sleeping.
 _MAX_SERVER_RETRY_AFTER = 60.0
+
+# Path segments a URL resolver treats as "this directory" or "the parent directory" (RFC 3986
+# section 5.2.4; a WHATWG URL parser also decodes ``%2e``). httpx and the server both collapse
+# them, so ``/v1/videos/../chapters`` would reach ``/v1/chapters``: an id equal to one of these
+# would move the request to another route with the caller's key.
+_DOT_SEGMENTS = frozenset({".", "..", "%2e", "%2e%2e", ".%2e", "%2e."})
+
+
+def path_segment(value: str | int) -> str:
+    """Encode an id as exactly one URL path segment.
+
+    ``/``, ``?``, ``#`` and ``%`` are percent-encoded (``:`` stays literal, as in
+    ``stream:abc``), so the id cannot add segments, a query or a fragment. An empty id, or one
+    that is a dot segment (``.``, ``..``), raises ``ValueError`` before anything is sent.
+    """
+    if value is None or isinstance(value, bool) or value == "":
+        raise ValueError("WAVE SDK: an id used in a URL path must be a non-empty string")
+    encoded = quote(str(value), safe=":")
+    if encoded.lower() in _DOT_SEGMENTS:
+        raise ValueError(f"WAVE SDK: {value!r} is not a valid id: it is a relative path segment")
+    return encoded
+
+
+def _check_path(path: str) -> None:
+    """Refuse a request path with a dot segment, whichever method built it.
+
+    Most namespaces interpolate ids into paths directly; this check is what keeps an id such as
+    ``..`` from redirecting any of them to a different route.
+    """
+    route = path.split("?", 1)[0].split("#", 1)[0]
+    for segment in route.split("/"):
+        if segment.lower() in _DOT_SEGMENTS:
+            raise ValueError(
+                f"WAVE SDK: refusing to send {path!r}: the dot segment {segment!r} would resolve "
+                "to a different route (check the ids passed to this method)"
+            )
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -184,6 +222,7 @@ class WaveClient:
         successful ``httpx.Response`` itself is returned, for routes that answer with bytes (audio,
         caption files); errors still raise :class:`WaveError` exactly as on the JSON path.
         """
+        _check_path(path)
         # Filter out None params
         if params:
             params = {k: v for k, v in params.items() if v is not None}
@@ -207,7 +246,7 @@ class WaveClient:
                 # Handle errors (a 429 parses to RateLimitError)
                 if not response.is_success:
                     error = self._parse_error(response)
-                    delay = self._retry_delay(error, attempt)
+                    delay = self._retry_delay(error, attempt, response)
                     if delay is not None and attempt < max_retries:
                         logger.warning(f"Request failed ({error.code}). Retrying in {delay}s")
                         time.sleep(delay)
@@ -242,16 +281,24 @@ class WaveClient:
         """Parse an error response into the most specific WaveError subclass."""
         return error_from_response(response)
 
-    def _retry_delay(self, error: WaveError, attempt: int) -> float | None:
+    def _retry_delay(
+        self, error: WaveError, attempt: int, response: httpx.Response | None = None
+    ) -> float | None:
         """Seconds to sleep before retrying ``error``, or None to raise it now.
 
-        None when the server's ``next_action`` says a retry cannot help, and when the server
-        asked for a longer wait than ``_MAX_SERVER_RETRY_AFTER`` (sleeping a capped time and
-        retrying early would only be refused again; the caller gets the full wait on the error).
+        The wait is the server's: ``RateLimitError.retry_after`` for a 429; otherwise a usable
+        ``Retry-After`` header, then a ``retry_after`` directive, then exponential backoff. None
+        when the server's ``next_action`` says a retry cannot help, and when the server asked
+        for a longer wait than ``_MAX_SERVER_RETRY_AFTER`` (sleeping a capped time and retrying
+        early would only be refused again; the caller gets the full wait on the error).
         """
         if not error.retryable:
             return None
-        wait = error.retry_after if isinstance(error, RateLimitError) else error.retry_after_hint
+        if isinstance(error, RateLimitError):
+            wait: float | None = error.retry_after
+        else:
+            header = retry_after_header(response) if response is not None else None
+            wait = header if header is not None else error.retry_after_hint
         if wait is None:
             return self._calculate_backoff(attempt)
         return wait if wait <= _MAX_SERVER_RETRY_AFTER else None

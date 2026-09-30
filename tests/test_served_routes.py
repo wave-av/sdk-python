@@ -93,6 +93,17 @@ def test_meter_accepts_counts_and_unknown_fields():
     assert ledger.channels.sms is not None and ledger.channels.sms.blocked == 1
 
 
+def test_meter_missing_counters_are_none_not_zero():
+    """A counter the response leaves out must not read as zero usage."""
+    ledger = MeterLedger.model_validate({
+        "org": "o", "from": "a", "to": "b", "generated_at": "c",
+        "channels": {"voice": {"usdc": "0.25"}, "mail": {"ops": 4}},
+    })
+    assert ledger.channels.voice is not None and ledger.channels.voice.minutes is None
+    assert ledger.channels.mail is not None and ledger.channels.mail.usdc is None
+    assert ledger.channels.storage is None
+
+
 # --- inference -----------------------------------------------------------------------------------
 
 
@@ -177,8 +188,17 @@ def test_chapters_per_video_operations(wave, recorder):
     assert body(recorder) == {"title": "Intro", "startTime": 0, "endTime": 30.5}
     wave.chapters.detect("rec:1", max_chapters=4)
     assert sent(recorder) == ("POST", "/v1/videos/rec:1/chapters/detect")
-    wave.chapters.get_detection_job("rec:1", "job/1")
-    assert sent(recorder) == ("GET", "/v1/videos/rec:1/chapters/detect/job%2F1")
+    assert body(recorder) == {"maxChapters": 4}
+
+
+def test_chapters_detect_sends_the_published_request_body(wave, recorder):
+    """ChapterDetectRequest uses camelCase keys; an argument left as None is not sent."""
+    wave.chapters.detect("rec:1", min_duration=45.0, max_chapters=6, include_descriptions=False, include_thumbnails=True)
+    assert body(recorder) == {"minDuration": 45.0, "maxChapters": 6, "includeDescriptions": False, "includeThumbnails": True}
+    wave.chapters.detect("rec:1", include_thumbnails=False)
+    assert body(recorder) == {"includeThumbnails": False}
+    wave.chapters.detect("rec:1")
+    assert body(recorder) == {}
 
 
 def test_editor_export(wave, recorder):
@@ -221,6 +241,14 @@ def test_podcast_uses_the_published_show_paths(wave, recorder):
         lambda w: w.chapters.get_default_set("a1"),
         lambda w: w.chapters.add_chapter("s1", "t", 0, 1),
         lambda w: w.editor.render("p1"),
+        lambda w: w.podcast.get("show_1"),
+        lambda w: w.podcast.update("show_1", name="n"),
+        lambda w: w.podcast.remove("show_1"),
+        lambda w: w.podcast.get_episode("ep_1"),
+        lambda w: w.podcast.publish_episode("ep_1"),
+        lambda w: w.podcast.get_rss_feed("show_1"),
+        lambda w: w.podcast.get_analytics("show_1"),
+        lambda w: w.podcast.distribute("show_1", ["spotify"]),
     ],
 )
 def test_methods_on_unpublished_paths_warn(wave, recorder, call):
@@ -229,6 +257,32 @@ def test_methods_on_unpublished_paths_warn(wave, recorder, call):
     recorder.set(lambda _r: live_response("err_route_not_found_404"))
     with pytest.warns(DeprecationWarning), pytest.raises(RouteNotServedError):
         call(wave)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda w: w.inference.complete("m", [{"role": "user", "content": "hi"}]),
+        lambda w: w.realtime.publish("stream:abc", "note", {"x": 1}),
+        lambda w: w.voice.generate("hello", "voice_1"),
+        lambda w: w.clips.detect("video_1"),
+        lambda w: w.chapters.detect("video_1"),
+        lambda w: w.chapters.create_chapter("video_1", "Intro", 0, 1),
+        lambda w: w.editor.export("prj_1"),
+        lambda w: w.podcast.create("Show"),
+        lambda w: w.podcast.create_episode("show_1", "Ep", audio_url="https://example.com/a.mp3"),
+    ],
+)
+def test_billed_or_broadcast_writes_are_sent_once(wave, recorder, call):
+    """A bare 5xx after the server may have accepted the request is raised, not retried: a retry
+    could bill a job twice or broadcast an event twice. (The fixture fails on any retry sleep.)"""
+    from wave_sdk import WaveError
+
+    recorder.set(lambda _r: httpx.Response(502, text="bad gateway"))
+    with pytest.raises(WaveError) as exc:
+        call(wave)
+    assert exc.value.status_code == 502
+    assert len(recorder.requests) == 1
 
 
 def test_ids_stay_one_path_segment(wave, recorder):
@@ -242,6 +296,47 @@ def test_ids_stay_one_path_segment(wave, recorder):
     assert sent(recorder) == ("DELETE", "/v1/collab/rooms/room%2F1")
     wave.podcast.list_episodes("show/1")
     assert sent(recorder) == ("GET", "/v1/podcast/shows/show%2F1/episodes")
+
+
+_ID_CALLS = [
+    lambda w, i: w.chapters.list_chapters(i),
+    lambda w, i: w.editor.export(i),
+    lambda w, i: w.collab.delete_room(i),
+    lambda w, i: w.realtime.presence(i),
+    lambda w, i: w.podcast.list_episodes(i),
+]
+
+
+@pytest.mark.parametrize("bad_id", ["..", ".", ""])
+@pytest.mark.parametrize("call", _ID_CALLS)
+def test_ids_that_are_dot_segments_are_refused(wave, recorder, call, bad_id):
+    """``/v1/videos/../chapters`` resolves to ``/v1/chapters``: a dot-segment id would send the
+    caller's key to a different route, so it is refused before anything is sent."""
+    with pytest.raises(ValueError):
+        call(wave, bad_id)
+    assert recorder.requests == []
+
+
+@pytest.mark.parametrize("call", _ID_CALLS)
+def test_percent_encoded_dots_stay_one_opaque_segment(wave, recorder, call):
+    """``%`` is encoded, so ``%2E%2E`` is sent as ``%252E%252E``: literal text, not a parent."""
+    recorder.set(lambda _r: httpx.Response(204))
+    call(wave, "%2E%2E")
+    assert "/%252E%252E" in recorder.last.url.raw_path.decode()
+
+
+@pytest.mark.parametrize("path", ["/v1/clips/..", "/v1/clips/../usage", "/v1/clips/./x", "/v1/clips/%2e%2e?x=1"])
+def test_any_request_path_with_a_dot_segment_is_refused(wave, recorder, path):
+    """Methods that interpolate ids without ``path_segment`` are covered by the client-wide check."""
+    with pytest.raises(ValueError, match="dot segment"):
+        wave.client.get(path)
+    assert recorder.requests == []
+
+
+def test_an_unencoded_dot_segment_id_is_refused_by_the_client(wave, recorder):
+    with pytest.raises(ValueError, match="dot segment"):
+        wave.clips.get("..")
+    assert recorder.requests == []
 
 
 def test_live_fixture_file_has_no_unscrubbed_ids():

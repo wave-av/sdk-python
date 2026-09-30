@@ -1,24 +1,23 @@
 """WAVE SDK - Chapters API. Auto-generate and manage video chapters.
 
 A video's chapters live under ``/v1/videos/{videoId}/chapters``: :meth:`ChaptersAPI.list_chapters`,
-:meth:`ChaptersAPI.create_chapter`, :meth:`ChaptersAPI.detect` and
-:meth:`ChaptersAPI.get_detection_job`.
+:meth:`ChaptersAPI.create_chapter` and :meth:`ChaptersAPI.detect`. The API publishes no operation
+for polling a detection job; read the result with :meth:`ChaptersAPI.list_chapters`.
 """
 from __future__ import annotations
 
 import time
 import warnings
 from typing import Any
-from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 def _video_path(video_id: str) -> str:
     # The video id is one path segment; encode anything that could leave it.
-    return f"/v1/videos/{quote(video_id, safe=':')}/chapters"
+    return f"/v1/videos/{path_segment(video_id)}/chapters"
 
 
 class Chapter(BaseModel):
@@ -44,16 +43,14 @@ class ChaptersAPI:
     def create_chapter(self, video_id: str, title: str, start_time: float, end_time: float, description: str | None = None) -> dict[str, Any]:
         """Add one chapter to a video. ``POST /v1/videos/{videoId}/chapters``."""
         body = {"title": title, "startTime": start_time, "endTime": end_time, "description": description}
-        result: dict[str, Any] = self._client.post(_video_path(video_id), json={k: v for k, v in body.items() if v is not None})
+        # Sent once: a retry after the API created the chapter would create a duplicate.
+        result: dict[str, Any] = self._client.post(_video_path(video_id), json={k: v for k, v in body.items() if v is not None}, no_retry=True)
         return result
     def detect(self, video_id: str, min_duration: float | None = None, max_chapters: int | None = None, include_descriptions: bool | None = None, include_thumbnails: bool | None = None) -> dict[str, Any]:
         """Start AI chapter detection. ``POST /v1/videos/{videoId}/chapters/detect`` -> a detection job (HTTP 202)."""
         body = {"minDuration": min_duration, "maxChapters": max_chapters, "includeDescriptions": include_descriptions, "includeThumbnails": include_thumbnails}
-        result: dict[str, Any] = self._client.post(f"{_video_path(video_id)}/detect", json={k: v for k, v in body.items() if v is not None})
-        return result
-    def get_detection_job(self, video_id: str, job_id: str) -> dict[str, Any]:
-        """Poll a detection job. ``GET /v1/videos/{videoId}/chapters/detect/{jobId}``."""
-        result: dict[str, Any] = self._client.get(f"{_video_path(video_id)}/detect/{quote(job_id, safe='')}")
+        # Sent once (billed): a retry after the API accepted the job would start a second one.
+        result: dict[str, Any] = self._client.post(f"{_video_path(video_id)}/detect", json={k: v for k, v in body.items() if v is not None}, no_retry=True)
         return result
     def get_default_set(self, asset_id: str) -> ChapterSet:
         """Deprecated: calls ``/v1/chapters/default/{id}``, which the API does not serve. Use :meth:`list_chapters`."""

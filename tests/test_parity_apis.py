@@ -222,10 +222,32 @@ def test_inference_complete_goes_through_the_gateway(mock_client):
         "/v1/inference/chat/completions",
         json={"model": "claude-haiku", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5},
         timeout=120.0,
+        no_retry=True,
     )
     assert result.model == "claude-haiku"
     assert result.content == "hi there"
     assert result.total_tokens == 12
+
+
+@pytest.mark.parametrize("reply", [None, "text", [], {}, {"choices": []}, {"choices": ["x"]}])
+def test_inference_complete_rejects_a_reply_without_choices(mock_client, reply):
+    """A 2xx without choices used to become an empty, apparently successful completion."""
+    from wave_sdk.client import WaveError
+
+    mock_client.post.return_value = reply
+    with pytest.raises(WaveError) as exc:
+        InferenceAPI(mock_client).complete("m", [{"role": "user", "content": "hi"}])
+    assert exc.value.code == "INVALID_RESPONSE"
+
+
+@pytest.mark.parametrize("reply", [None, [], {"data": None}, {"data": "x"}, {"data": [{"id": "a"}, "b"]}])
+def test_inference_models_rejects_a_reply_without_a_model_list(mock_client, reply):
+    from wave_sdk.client import WaveError
+
+    mock_client.get.return_value = reply
+    with pytest.raises(WaveError) as exc:
+        InferenceAPI(mock_client).models()
+    assert exc.value.code == "INVALID_RESPONSE"
 
 
 def test_inference_complete_never_leaves_the_gateway(monkeypatch, mock_client):

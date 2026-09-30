@@ -96,22 +96,28 @@ def _retry_after_directive(next_action: Any) -> float | None:
     return _wait_seconds(next_action.get("seconds"))
 
 
+def retry_after_header(response: httpx.Response) -> float | None:
+    """The ``Retry-After`` header in seconds, or None when it is absent or is not a finite,
+    non-negative number (an HTTP date, ``nan``, ``-1``)."""
+    header = response.headers.get("retry-after")
+    if not header:
+        return None
+    try:
+        return _wait_seconds(float(header))
+    except ValueError:
+        return None
+
+
 def retry_after_seconds(response: httpx.Response, next_action: Any = None) -> float:
     """How long the server asked the caller to wait before retrying.
 
-    A numeric ``Retry-After`` header wins, then the body's ``retry_after`` directive, then 1 s. A
-    header that is not a finite, non-negative number of seconds (an HTTP date, ``nan``, ``-1``)
-    is ignored. The value is not capped here; the client decides whether a wait is too long to
-    retry on its own.
+    A usable ``Retry-After`` header wins, then the body's ``retry_after`` directive, then 1 s.
+    The value is not capped here; the client decides whether a wait is too long to retry on its
+    own.
     """
-    header = response.headers.get("retry-after")
-    if header:
-        try:
-            parsed = _wait_seconds(float(header))
-        except ValueError:
-            parsed = None
-        if parsed is not None:
-            return parsed
+    header = retry_after_header(response)
+    if header is not None:
+        return header
     directive = _retry_after_directive(next_action)
     return directive if directive is not None else 1.0
 
@@ -219,6 +225,8 @@ def _from_flat_body(body: dict[str, Any], fields: dict[str, Any]) -> None:
         fields["accepts"] = [a for a in body["accepts"] if isinstance(a, dict)]
     if isinstance(body.get("x402Version"), int):
         fields["x402_version"] = body["x402Version"]
+    if not fields["request_id"] and isinstance(detail.get("request_id"), str):
+        fields["request_id"] = detail["request_id"]
     extra = {k: v for k, v in body.items() if k not in _FLAT_BODY_SKIP}
     detail_extra = {k: v for k, v in detail.items() if k not in _ERROR_OBJECT_KEYS}
     merged = {**detail_extra, **extra, **(_as_dict(detail.get("details")) or {})}

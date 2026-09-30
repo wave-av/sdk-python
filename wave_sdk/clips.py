@@ -278,8 +278,10 @@ class ClipsAPI:
             "sensitivity": sensitivity,
             "maxClips": max_clips,
         }
+        # Sent once (billed): a retry after the API accepted the job would start a second one.
         result: dict[str, Any] = self._client.post(
-            f"{self._base_path}/detect", json={k: v for k, v in body.items() if v is not None}
+            f"{self._base_path}/detect", json={k: v for k, v in body.items() if v is not None},
+            no_retry=True,
         )
         return result
 

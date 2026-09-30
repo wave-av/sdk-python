@@ -19,7 +19,10 @@ from pathlib import Path
 
 SOURCE = "https://api.wave.online/openapi.json"
 OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "openapi_snapshot.json"
-METHODS = ("get", "post", "put", "patch", "delete")
+# Every operation verb a Path Item can hold (OpenAPI 3.x), so a new HEAD/OPTIONS/TRACE operation
+# reaches the contract test instead of being dropped. The other Path Item keys (summary,
+# description, servers, parameters, $ref) are not operations.
+METHODS = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
 
 
 def load(argv: list[str]) -> dict:

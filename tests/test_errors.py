@@ -212,6 +212,58 @@ def test_an_unusable_retry_after_header_falls_back(wave, recorder, monkeypatch, 
     assert sleeps == [1.0]
 
 
+def test_a_retryable_503_follows_its_retry_after_header(wave, recorder, monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("wave_sdk.client.time.sleep", sleeps.append)
+    replies = iter([httpx.Response(503, headers={"retry-after": "2"}), httpx.Response(200, json={"ok": True})])
+    recorder.set(lambda _r: next(replies))
+    assert wave.client.get("/v1/anything") == {"ok": True}
+    assert sleeps == [2.0]
+
+
+def test_request_id_inside_error_detail_is_kept():
+    body = {"error": "payment required", "error_detail": {"code": "PAYMENT_REQUIRED", "message": "m", "request_id": "req-in-detail"}}
+    assert error_from_response(httpx.Response(402, json=body)).request_id == "req-in-detail"
+
+
+def test_a_retry_hint_over_the_cap_is_raised_with_the_full_wait(wave, recorder):
+    """61 s is just over the 60 s the client will sleep through: raised at once, not capped."""
+    recorder.set(lambda _r: httpx.Response(503, headers={"retry-after": "61"}))
+    with pytest.raises(WaveError) as exc:
+        wave.client.get("/v1/anything")
+    assert exc.value.status_code == 503
+    assert len(recorder.requests) == 1
+
+
+# --- raw responses and billed calls -------------------------------------------------------------
+
+
+def test_raw_returns_the_response_for_json_and_bytes(wave, recorder):
+    recorder.set(lambda _r: httpx.Response(200, content=b"WEBVTT\n", headers={"content-type": "text/vtt"}))
+    resp = wave.client.get("/v1/anything", raw=True)
+    assert isinstance(resp, httpx.Response) and resp.content == b"WEBVTT\n"
+    assert wave.client.get("/v1/anything") is None  # the JSON path has no body to decode
+    recorder.set(lambda _r: httpx.Response(200, json={"ok": True}))
+    assert wave.client.get("/v1/anything", raw=True).json() == {"ok": True}
+
+
+def test_raw_still_raises_the_parsed_error(wave, recorder):
+    recorder.set(lambda _r: live_response("err_spend_cap_402"))
+    with pytest.raises(PaymentRequiredError) as exc:
+        wave.client.get("/v1/anything", raw=True)
+    assert exc.value.code == "SPEND_CAP_TIER_BLOCKED"
+
+
+def test_inference_complete_raises_the_gateway_error_once(wave, recorder):
+    """A refused completion raises the gateway's error; it is sent once (billed per token)."""
+    refused = {"error": {"code": "SCOPE_INSUFFICIENT", "message": "needs dispatch:write"}}
+    recorder.set(lambda _r: httpx.Response(403, json=refused))
+    with pytest.raises(WaveError) as exc:
+        wave.inference.complete("qwen2.5:3b", [{"role": "user", "content": "hi"}], max_tokens=1)
+    assert exc.value.code == "SCOPE_INSUFFICIENT" and exc.value.status_code == 403
+    assert [(r.method, r.url.path) for r in recorder.requests] == [("POST", "/v1/inference/chat/completions")]
+
+
 def test_a_non_finite_directive_is_ignored():
     err = error_from_response(httpx.Response(503, content=b'{"error": {"code": "BUSY", "message": "m", "next_action": {"type": "retry_after", "seconds": Infinity}}}', headers={"content-type": "application/json"}))
     assert err.retry_after_hint is None

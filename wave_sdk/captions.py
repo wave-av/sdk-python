@@ -4,12 +4,11 @@ from __future__ import annotations
 import time
 import warnings
 from typing import Any, Literal
-from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 class CaptionTrack(BaseModel):
@@ -43,7 +42,7 @@ class CaptionsAPI:
         The published response is JSON; if the API answers with the caption file itself (for
         example ``text/vtt``), its text is returned as ``content``, with ``content_type`` set.
         """
-        response: httpx.Response = self._client.get(f"{self._base}/{quote(job_id, safe=':')}/download", params={"language": language, "format": format}, raw=True)
+        response: httpx.Response = self._client.get(f"{self._base}/{path_segment(job_id)}/download", params={"language": language, "format": format}, raw=True)
         if response.headers.get("content-type", "").startswith("application/json"):
             result: dict[str, Any] = response.json()
             return result

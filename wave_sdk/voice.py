@@ -50,8 +50,10 @@ class VoiceAPI:
             "stability": stability, "similarityBoost": similarity_boost, "style": style,
             "timestamps": timestamps,
         }
+        # Sent once (billed): a retry after the API accepted the request would bill it twice.
         response: httpx.Response = self._client.post(
-            f"{self._base}/generate", json={k: v for k, v in body.items() if v is not None}, raw=True
+            f"{self._base}/generate", json={k: v for k, v in body.items() if v is not None},
+            raw=True, no_retry=True,
         )
         if response.headers.get("content-type", "").startswith("application/json"):
             result: dict[str, Any] = response.json()

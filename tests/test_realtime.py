@@ -155,6 +155,14 @@ def test_rejected_upgrade_raises_the_same_error_as_rest(monkeypatch):
     assert exc.value.accepts and exc.value.accepts[0]["resource"] == "/v1/clips"
 
 
+@pytest.mark.parametrize("base_url", ["http://api.example.com", "http://10.0.0.5:8787"])
+def test_key_is_never_sent_over_cleartext_websocket(captured_ws, base_url):
+    """ws:// carries the Authorization header in the clear; only a loopback dev server may use it."""
+    with pytest.raises(ValueError, match="wss://"):
+        _api(base_url=base_url).connect("c")
+    assert captured_ws == []
+
+
 def test_rate_limited_upgrade_raises_rate_limit_error(monkeypatch):
     """A 429 on the upgrade is the same RateLimitError (with retry_after) a REST call raises."""
     from wave_sdk import RateLimitError

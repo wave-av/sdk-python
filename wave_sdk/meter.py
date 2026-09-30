@@ -26,24 +26,27 @@ class _MeterModel(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
+# A counter the response leaves out is None, never 0: a missing value must not read as "no usage".
+
+
 class MeterMailChannel(_MeterModel):
-    ops: int = 0; usdc: Amount = "0"; errors: int = 0; blocked: Blocked = None
+    ops: int | None = None; usdc: Amount | None = None; errors: int | None = None; blocked: Blocked = None
 
 
 class MeterVoiceChannel(_MeterModel):
-    minutes: float = 0; usdc: Amount = "0"
+    minutes: float | None = None; usdc: Amount | None = None
 
 
 class MeterSmsChannel(_MeterModel):
-    ops: int = 0; blocked: Blocked = None
+    ops: int | None = None; blocked: Blocked = None
 
 
 class MeterRealtimeChannel(_MeterModel):
-    minutes: float = 0
+    minutes: float | None = None
 
 
 class MeterStorageChannel(_MeterModel):
-    bytes: int = 0
+    bytes: int | None = None
 
 
 class MeterChannels(_MeterModel):

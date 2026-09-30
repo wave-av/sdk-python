@@ -3,11 +3,10 @@ from __future__ import annotations
 
 import warnings
 from typing import Any
-from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from wave_sdk.client import WaveClient
+from wave_sdk.client import WaveClient, path_segment
 
 
 class CollabRoom(BaseModel):
@@ -30,7 +29,7 @@ class CollabAPI:
     def list_rooms(self, **params: Any) -> dict: return self._client.get(f"{self._base}/rooms", params={k: v for k, v in params.items() if v is not None})
     def delete_room(self, room_id: str) -> None:
         """Close and delete a room. ``DELETE /v1/collab/rooms/{roomId}``."""
-        self._client.delete(f"{self._base}/rooms/{quote(room_id, safe=':')}")
+        self._client.delete(f"{self._base}/rooms/{path_segment(room_id)}")
     def close_room(self, room_id: str) -> None:
         """Deprecated alias of :meth:`delete_room` (it used to send ``POST .../close``, which is not a
         published API operation)."""
