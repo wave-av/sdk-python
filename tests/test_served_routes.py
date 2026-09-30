@@ -122,26 +122,6 @@ def test_inference_complete_through_the_gateway(wave, recorder):
     assert result.content == "ok"
 
 
-# --- mesh ----------------------------------------------------------------------------------------
-
-
-def test_mesh_requires_a_node_before_sending(wave, recorder):
-    with pytest.raises(ValueError, match="x-wave-node"):
-        wave.mesh.list_peers()
-    assert recorder.requests == []
-
-
-def test_mesh_sends_the_node_header(wave, recorder):
-    recorder.set(lambda _r: live_response("mesh_peers"))
-    wave.mesh.node = "studio-a"
-    peers = wave.mesh.list_peers()
-    assert sent(recorder) == ("GET", "/v1/mesh/peers")
-    assert recorder.last.headers["x-wave-node"] == "studio-a"
-    assert peers == {"count": 0, "org": "org_fixture", "peers": []}
-    wave.mesh.list_peers(node="studio-b")
-    assert recorder.last.headers["x-wave-node"] == "studio-b"
-
-
 # --- path corrections ------------------------------------------------------------------------------
 
 

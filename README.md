@@ -141,7 +141,12 @@ Every `/v1/mesh` request names the node it is for in an `x-wave-node` header:
 ```python
 client.mesh.node = "studio-a"
 peers = client.mesh.list_peers()                   # {"org", "count", "peers": [...]}
+peers_b = client.mesh.list_peers(node="studio-b")  # any method takes node= for one call
 ```
+
+Every mesh method, mutations included, raises `ValueError` before sending when no node is set.
+The mutations (`add_peer`, `remove_peer`, `create_policy`, `trigger_failover`) are sent once and
+never retried automatically.
 
 ## Error handling
 

@@ -58,8 +58,11 @@ each mapped method actually sends.
 - **Paths** moved to the published API operations: `podcast` uses `/v1/podcast/shows` and
   `/v1/podcast/shows/{id}/episodes`; `sentiment.analyze_text()` posts to
   `/v1/sentiment/analyze`.
-- **Mesh** requests carry the required `x-wave-node` header (`client.mesh.node` or `node=`); a
-  call without one raises `ValueError` before sending.
+- **Mesh** requests carry the required `x-wave-node` header (`client.mesh.node`, or `node=` on
+  any method, mutations included); a call without one, or with a multi-line node name, raises
+  `ValueError` before sending. Mesh ids are encoded as one path segment, and the mutations
+  (`add_peer`, `remove_peer`, `create_policy`, `trigger_failover`) are sent once rather than
+  retried, so a 5xx after the server applied the change cannot fail over twice.
 - **Path safety**: every request whose path contains a `.` or `..` segment raises `ValueError`
   before it is sent. httpx resolves those segments, so in 2.2.0 `clips.get("../usage")` was sent
   to `/v1/usage` with the caller's key. The methods added or changed in this release also
