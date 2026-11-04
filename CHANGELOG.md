@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- The PyPI summary no longer states a raw API module count. The number had
+  already moved from 42 to 43 between releases and nothing measures it, so
+  wave.online's copy-freshness gate could not verify it (WAVE-32922).
+
 ## [2.2.0] - 2026-09-06
 
 ### Added
