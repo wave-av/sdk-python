@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- The PyPI summary no longer states an API module count. The number changed
+  between releases (42, then 43), so the summary now describes the package
+  without one.
+
 ## [2.2.0] - 2026-09-06
 
 ### Added
